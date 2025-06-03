@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/Auth.css';
 import Header from './Header';
 import Footer from './Footer';
-
+import '../styles/SignupPage.css';
 const SignupPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,6 +41,9 @@ const SignupPage = () => {
   return (
     <>
       <Header />
+      <div className="signup-back-button">
+        <button onClick={() => navigate(-1)}>← Back</button>
+        </div>
 
       <div className="auth-container">
         <h2>Sign Up</h2>

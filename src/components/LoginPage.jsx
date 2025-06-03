@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/Auth.css';
 import Header from './Header';
 import Footer from './Footer';
+import '../styles/LoginPage.css';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ const LoginPage = () => {
   const handleGoogleSignIn = async () => {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({
-    prompt: 'select_account' // ✅ This line forces account selection
+    prompt: 'select_account' // This line forces account selection
   });
 
   try {
@@ -40,6 +41,9 @@ const LoginPage = () => {
   return (
     <>
       <Header />
+      <div className="login-back-button">
+        <button onClick={() => navigate(-1)}>← Back</button>
+        </div>
 
       <div className="auth-container">
         <h2>Login</h2>

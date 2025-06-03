@@ -24,3 +24,34 @@
 .logout-btn:hover {
   background-color: #e6e6e6;
 }
+
+.dashboard-info {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10px 30px;
+  background-color: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.user-info {
+  margin-right: 16px;
+  font-size: 0.95rem;
+  color: white;
+}
+
+.logout-btn {
+  padding: 6px 14px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.logout-btn:hover {
+  background-color: #dc2626;
+}

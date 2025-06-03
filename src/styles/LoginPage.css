@@ -1,0 +1,147 @@
+/* Page background and font */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f4f6fb;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Login card container */
+.auth-container {
+  max-width: 380px;
+  margin: 80px auto;
+  padding: 35px 30px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+/* Heading */
+.auth-container h2 {
+  font-size: 1.8rem;
+  margin-bottom: 25px;
+  color: #1e293b;
+}
+
+/* Inputs and buttons have same width and box model */
+.auth-container input,
+.auth-container button {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Input fields */
+.auth-container input {
+  padding: 12px;
+  margin: 12px 0;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.auth-container input:focus {
+  border-color: #4a90e2;
+}
+
+/* Login button */
+.auth-container button[type="submit"] {
+  padding: 11px 0;               /* Shorter height only */
+  margin-top: 10px;
+  width: 100%;                  /* Keep full width */
+  background-color: #4a90e2;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: inline-block;
+}
+
+.auth-container button[type="submit"]:hover {
+  background-color: #357ab8;
+}
+
+/* Google Sign-in button */
+.google-btn {
+  padding: 12px;
+  margin-top: 18px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.google-btn:hover {
+  background-color: #306dc1;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Error message */
+.auth-container p {
+  margin-top: 10px;
+  font-size: 0.95rem;
+}
+
+.auth-container p[style*="color: red"] {
+  color: #e63946;
+  font-weight: 500;
+}
+
+/* Signup link */
+.auth-container a {
+  color: #4a90e2;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-container a:hover {
+  text-decoration: underline;
+}
+.login-back-button {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  z-index: 10;
+}
+
+/* Back Button Styling */
+.login-back-button button {
+  background-color: transparent;
+  color: #ebf1f1;
+  font-size: 0.95rem;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-back-button button:hover {
+  background-color: #2563eb;
+  color: white;
+}
+/* Divider */
+.auth-container hr {
+  margin: 20px 0;
+  border: none;
+  height: 1px;
+  background-color: #ddd;
+}
+
+/* Responsive design */
+@media (max-width: 500px) {
+  .auth-container {
+    margin: 50px 20px;
+    padding: 25px 20px;
+  }
+}

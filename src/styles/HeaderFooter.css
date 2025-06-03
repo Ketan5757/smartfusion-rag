@@ -49,7 +49,33 @@
 .main-content:hover {
   transform: scale(1.01);
 } 
+.dashboard-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
 
+.user-info {
+  font-size: 0.9rem;
+  color: white;
+}
+
+.logout-btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.logout-btn:hover {
+  background-color: #dc2626;
+}
 .footer {
   text-align: center;
   padding: 15px;

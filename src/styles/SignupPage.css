@@ -1,0 +1,23 @@
+/* Back Button Styling */
+.signup-back-button {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  z-index: 10;
+}
+.signup-back-button button {
+  background-color: transparent;
+  color: #ebf1f1;
+  font-size: 0.95rem;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.signup-back-button button:hover {
+  background-color: #2563eb;
+  color: white;
+}
