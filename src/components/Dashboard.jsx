@@ -12,7 +12,7 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="dashboard-container">
         <main style={{ padding: '30px' }}>
-          <h1>Welcome to your Dashboard</h1>
+          <h1>Welcome to Dashboard</h1>
           <p>Start uploading your PDFs or speak your query!</p>
         </main>
       </div>
