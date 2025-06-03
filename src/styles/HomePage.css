@@ -62,7 +62,7 @@
 @keyframes float {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-12px); }
-  100% { transform: translateY(0px); }
+  1000% { transform: translateY(0px); }
 }
 
 .left .robot-img {
@@ -86,7 +86,6 @@
   letter-spacing: -0.5px;
   transition: all 0.3s ease;
 }
-
 
 
 .right h2 {

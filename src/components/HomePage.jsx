@@ -2,8 +2,11 @@ import React from 'react';
 import '../styles/HomePage.css';
 import robotImage from '../assets/robot.jpg';
 import logoImage from '../assets/logo.png';
+import { useNavigate } from 'react-router-dom';
+
 
 const HomePage = () => {
+    const navigate = useNavigate();
   return (
     <div className="home-container">
       {/* Header */}
@@ -26,7 +29,7 @@ const HomePage = () => {
           <h1>SmartFusion RAG</h1>
           <h2>Smarter answers powered by real knowledge.</h2>
           <p>This platform combines advanced retrieval with language generation to deliver accurate, context-aware responses from trusted sources like PDFs, websites, and voice input.</p>
-          <button onClick={() => window.location.href='/login'}>Get Started</button>
+          <button onClick={() => navigate('/login')}>Get Started</button>
         </div>
       </div>
 
