@@ -1,0 +1,43 @@
+.navbar {
+  background-color: #c9a8d3;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+}
+
+.logo-img {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+}
+
+.logo-text .main-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.logo-text .tagline {
+  font-size: 0.85rem;
+  color: #333;
+}
+.logo-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+
+.footer {
+  text-align: center;
+  padding: 15px;
+  background-color: #f2f2f2;
+  color: #555;
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+}
