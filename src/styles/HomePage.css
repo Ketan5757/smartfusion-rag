@@ -1,78 +1,163 @@
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-}
-
+/* 1. Page Layout */
 .home-container {
-  background-color: #f2f6fb;
-  height: 100vh;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
+  background-color: #f1f5f9;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #1e293b;
 }
 
+/* 2. Navbar - Deep Blue with White Text */
 .navbar {
-  background-color: #c9a8d3;
-  padding: 10px 20px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  padding: 14px 32px;
+  background-color: #1e293b; 
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.logo {
-  font-size: 1.2rem;
-  font-weight: bold;
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-.profile-icon {
-  font-size: 1.5rem;
+.logo-img {
+  height: 48px;
 }
 
+.logo-text .main-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1aa6c9;
+}
+
+.logo-text .tagline {
+  font-size: 0.75rem;
+  color: white; /* Subtle slate gray */
+}
+
+/* 3. Main Content - Card Style with Flex */
 .main-content {
-  display: flex;
   flex: 1;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  justify-content: center;
-  padding: 20px;
+  padding: 30px 20px;           
+  gap: 50px;                    
+  margin: 20px auto;            
+  background-color: #ffffff;
+  border-radius: 16px;
+  width: 85%;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s ease;
 }
 
-.left {
-  flex: 1;
-  display: flex;
-  justify-content: center;
+.main-content:hover {
+  transform: scale(1.01);
 }
 
-.robot-img {
-  width: 80%;
-  max-width: 350px;
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+  100% { transform: translateY(0px); }
 }
 
+.left .robot-img {
+  max-width: 400px;
+  height: auto;
+  border-radius: 10px;
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 4. Right Section Text */
 .right {
-  flex: 1;
-  padding: 30px;
+  max-width: 600px;
 }
 
 .right h1 {
-  font-size: 3rem;
-  margin-bottom: 10px;
+  margin: 0 0 10px 0;
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #1aa6c9; /* Elegant indigo/blue tone */
+  text-shadow: 2px 2px 6px rgba(29, 78, 216, 0.15); /* soft glow */
+  letter-spacing: -0.5px;
+  transition: all 0.3s ease;
 }
 
+
+
 .right h2 {
-  font-size: 1.5rem;
-  color: #444;
-  margin-bottom: 20px;
+  font-size: 1.3rem;
+  color: #334155;
+  font-weight: 600;
+  margin-bottom: 18px;
 }
 
 .right p {
-  font-size: 1.1rem;
-  margin-bottom: 30px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #475569;
+  margin-bottom: 25px;
 }
 
-button {
-  background-color: #a569bd;
-  color: white;
+/* 5. Button - Gradient with Hover */
+.right button {
+  background: linear-gradient(to right, #4ade80, #14b8a6); /* mint green → teal */
   border: none;
-  padding: 12px 24px;
+  color: black;
+  padding: 12px 28px;
   font-size: 1rem;
   border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.right button:hover {
+  background: linear-gradient(to right, #14b8a6, #0d9488); /* deeper teal */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
+
+/* 6. Footer - Dark Blue Bar */
+.footer {
+  margin-top: auto; /* Pushes footer down if content is short */
+  text-align: center;
+  padding: 18px 0;
+  background-color: #1e293b;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  border-top: 1px solid #1e293b;
+}
+
+/* Animation Keyframes */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Text Reveal Effects */
+.right h1 {
+  animation: fadeUp 0.6s ease-out 0s both;
+}
+
+.right h2 {
+  animation: fadeUp 0.6s ease-out 0.2s both;
+}
+
+.right p {
+  animation: fadeUp 0.6s ease-out 0.4s both;
+}
+
+.right button {
+  animation: fadeUp 0.6s ease-out 0.6s both;
 }

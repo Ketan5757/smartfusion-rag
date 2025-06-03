@@ -1,15 +1,23 @@
 import React from 'react';
 import '../styles/HomePage.css';
-import robotImage from '../assets/robot.jpg'; // Replace with your image name
+import robotImage from '../assets/robot.jpg';
+import logoImage from '../assets/logo.png';
 
 const HomePage = () => {
   return (
     <div className="home-container">
+      {/* Header */}
       <header className="navbar">
-        <div className="logo">📘 SmartFusion RAG</div>
-        <div className="profile-icon">👤</div>
+        <div className="logo-section">
+          <img src={logoImage} alt="Logo" className="logo-img" />
+          <div className="logo-text">
+            <div className="main-title">SmartFusion RAG</div>
+            <div className="tagline">Smart Retrieval from Documents & Web</div>
+          </div>
+        </div>
       </header>
 
+      {/* Main Content */}
       <div className="main-content">
         <div className="left">
           <img src={robotImage} alt="Robot" className="robot-img" />
@@ -21,8 +29,14 @@ const HomePage = () => {
           <button onClick={() => window.location.href='/login'}>Get Started</button>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="footer">
+        <p>&copy; 2025 SmartFusion RAG. All rights reserved.</p>
+      </footer>
     </div>
   );
 };
 
 export default HomePage;
+
