@@ -19,6 +19,9 @@ const HomePage = () => {
           </div>
         </div>
       </header>
+      <div className="scrolling-bar">
+        <div className="scrolling-text">Welcome to SmartFusion RAG System</div>
+        </div>
 
       {/* Main Content */}
       <div className="main-content">

@@ -58,6 +58,38 @@
 .main-content:hover {
   transform: scale(1.01);
 }
+/* Scrolling Bar */
+.scrolling-bar {
+  width: 100%;
+  overflow: hidden;
+  background-color: #e6f7ff;
+  border-top: 2px solid #007acc;
+  border-bottom: 2px solid #007acc;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+/* Scrolling Text */
+.scrolling-text {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 22px;
+  font-weight: bold;
+  color: #007acc;
+  animation: scroll-right 20s linear infinite;
+}
+
+/* Keyframes for Left-to-Right Scroll */
+@keyframes scroll-right {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
 
 @keyframes float {
   0% { transform: translateY(0px); }
