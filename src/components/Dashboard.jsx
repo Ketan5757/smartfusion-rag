@@ -1,10 +1,15 @@
 import '../styles/Dashboard.css';
 import Header from './Header';
 import Footer from './Footer';
-import uploadIcon from '../assets/upload.jpeg';
+import uploadIcon from '../assets/upload.png';
+import sendIcon from '../assets/send.png';
+import { useState } from 'react';
 
 
 const Dashboard = () => {
+
+  const [inputText, setInputText] = useState('');
+  const [submittedText, setSubmittedText] = useState('');
 
   return (
     <>
@@ -32,33 +37,70 @@ const Dashboard = () => {
     <div className="dashboard-right">
   <center><h1>Chat with PDFs and Webpages</h1></center>
 
+  <div className="upload-wrapper">
   <div className="upload-section">
-  <label className="upload-label">Upload your pdf or enter link</label>
-  
-  <div className="upload-box">
-    <input type="text" placeholder="Enter the website link here" />
+    <label className="upload-label">Upload your pdf or enter link</label>
+<div className="upload-box">
+  {/* Input field */}
+  <input
+    type="text"
+    placeholder="Enter the website link here"
+    value={inputText}
+    onChange={(e) => setInputText(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' && inputText.trim() !== '') {
+        setSubmittedText(inputText);
+        setInputText('');
+      }
+    }}
+  />
 
-    {/* Hidden File Input */}
-    <input
-      type="file"
-      id="file-upload"
-      accept=".pdf"
-      style={{ display: 'none' }}
-      onChange={(e) => {
-        const file = e.target.files[0];
-        console.log('Selected file:', file);
-        // You can add your file handling logic here
-      }}
-    />
+  {/* Hidden file input */}
+  <input
+    type="file"
+    id="file-upload"
+    accept=".pdf"
+    style={{ display: 'none' }}
+    onChange={(e) => {
+      const file = e.target.files[0];
+      if (file) setInputText(file.name);
+    }}
+  />
 
-    {/* Label acts as clickable button for hidden input */}
-    <label htmlFor="file-upload" className="upload-btn">
-      <img src={uploadIcon} alt="Upload" className="upload-icon" />
-    </label>
-  </div>
+  {/* upload.png triggers file picker */}
+  <label htmlFor="file-upload" title="Upload PDF">
+    <img src={uploadIcon} alt="Upload PDF" className="upload-icon" />
+  </label>
+
+  {/* send.png submits input */}
+  <img
+    src={sendIcon}
+    alt="Submit"
+    className="upload-icon"
+    title="Submit"
+    onClick={() => {
+      if (inputText.trim() !== '') {
+        setSubmittedText(inputText);
+        setInputText('');
+      }
+    }}
+  />
 </div>
 </div>
+</div>
+
+  {/* Output BELOW, not affecting the input box width */}
+  {submittedText && (
+  <div className="submitted-output">
+    <p>
+      Uploaded : {submittedText.length > 50
+        ? submittedText.slice(0, 50) + '...'
+        : submittedText}
+    </p>
   </div>
+  )}
+</div>
+</div>
 
   <Footer />
 </>
