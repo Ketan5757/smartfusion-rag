@@ -58,6 +58,7 @@
 .main-content:hover {
   transform: scale(1.01);
 }
+
 /* Scrolling Bar */
 .scrolling-bar {
   width: 100%;
@@ -90,6 +91,7 @@
     left: 100%;
   }
 }
+
 
 @keyframes float {
   0% { transform: translateY(0px); }
