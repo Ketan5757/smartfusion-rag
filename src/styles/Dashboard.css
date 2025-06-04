@@ -34,6 +34,45 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
+/*Dashboard division*/
+.dashboard-wrapper {
+  display: flex;
+  height: calc(100vh - 120px); /* Adjust if your header/footer are different */
+  margin: 0;
+  padding: 0;
+}
+
+.dashboard-left {
+  width: 20vw;
+  height: 100%;
+  padding: 20px;
+  background-color: #f4f4f4;
+  border-right: 2px solid #ccc;
+}
+
+.dashboard-right {
+  width: 80vw;
+  height: 100%;
+  padding: 30px;
+  background-color: #e8eff4;
+}
+
+/* Optional for left section styling */
+.dashboard-left h2 {
+  color: #1aa6c9;
+  font-size: 24px;
+}
+
+.chat-history-box {
+  margin-top: 30px;
+  padding: 10px;
+  background-color: #dcdcdc;
+  height: 360px;
+  overflow-y: auto;
+  border-radius: 8px;
+}
+
+
 .user-info {
   margin-right: 16px;
   font-size: 0.95rem;
