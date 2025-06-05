@@ -4,12 +4,26 @@ import Footer from './Footer';
 import uploadIcon from '../assets/upload.png';
 import sendIcon from '../assets/send.png';
 import { useState } from 'react';
+import micIcon from '../assets/mic.png'; 
 
 
 const Dashboard = () => {
 
   const [inputText, setInputText] = useState('');
   const [submittedText, setSubmittedText] = useState('');
+  const [questionText, setQuestionText] = useState('');
+
+  const handleAskQuestion = () => {
+  if (questionText.trim() !== '') {
+    console.log("User asked:", questionText);
+    // You can implement backend call or chat logic here
+    setQuestionText('');
+  }
+};
+
+const handleMicInput = () => {
+  console.log("Mic icon clicked - implement STT here");
+};
 
   return (
     <>
@@ -99,6 +113,35 @@ const Dashboard = () => {
     </p>
   </div>
   )}
+  {/* Ask Questions Section */}
+<div className="question-row">
+  <label className="question-label">Ask Questions about</label>
+  <div className="upload-box">
+    <input
+      type="text"
+      placeholder="Ask your question here"
+      value={questionText}
+      onChange={(e) => setQuestionText(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && questionText.trim() !== '') {
+          handleAskQuestion();
+        }
+      }}
+    />
+    <img
+      src={micIcon}
+      alt="Mic"
+      className="upload-icon"
+      onClick={handleMicInput}
+    />
+    <img
+      src={sendIcon}
+      alt="Send"
+      className="upload-icon"
+      onClick={handleAskQuestion}
+    />
+  </div>
+</div>
 </div>
 </div>
 
