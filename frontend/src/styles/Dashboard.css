@@ -63,7 +63,6 @@
 }
 
 
-/* Optional for left section styling */
 .dashboard-left h2 {
   color: #1aa6c9;
   font-size: 24px;
@@ -159,7 +158,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 20px;       /* ⬅️ Less margin to move it up */
+  margin-top: 20px;      
   gap: 6px;
   width: 100%;
   position: relative;
@@ -169,7 +168,7 @@
   font-size: 16px;
   font-weight: 500;
   align-self: center;
-  transform: translateX(-40px); /* ⬅️ Move slightly to the right */
+  transform: translateX(-40px); 
 }
 .upload-box {
   display: flex;
