@@ -16,7 +16,7 @@ const Dashboard = () => {
   const handleAskQuestion = () => {
   if (questionText.trim() !== '') {
     console.log("User asked:", questionText);
-    // You can implement backend call or chat logic here
+    //  backend call or chat logic here
     setQuestionText('');
   }
 };
