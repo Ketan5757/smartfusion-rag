@@ -1,0 +1,43 @@
+# Environment files
+.env
+.env.local
+.env*.backup
+
+# Python cache and build files
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.so
+.Python
+
+# Database and local files
+*.sqlite3
+*.db
+*.dump
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
+
+# IDE-specific files (VSCode, PyCharm, etc.)
+.vscode/
+.idea/
+*.iml
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Jupyter notebooks (if any)
+.ipynb_checkpoints/
+
+# macOS folder attributes
+.DS_Store
+
+# Windows folder attributes
+Thumbs.db
