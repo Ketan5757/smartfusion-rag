@@ -1,71 +1,92 @@
 import os
-import fitz  # PyMuPDF
-import psycopg2
 from datetime import date
 from dotenv import load_dotenv
-from openai import OpenAI, RateLimitError
+from sentence_transformers import SentenceTransformer
+import fitz  # PyMuPDF
+import psycopg2
 
 # --- Load Environment Variables ---
-load_dotenv()  # Load from .env file
+load_dotenv()  # Loads DB credentials and other config from .env
 
-# --- Initialize OpenAI Client (Fixed Version) ---
-try:
-    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])  # Strict env var access
-except KeyError:
-    raise ValueError("❌ OPENAI_API_KEY not found in environment variables. "
-                    "Please add it to .env file or export it.")
+# Debug: print loaded env vars
+print("🔧 DB_NAME:", os.getenv("DB_NAME"))
+print("🔧 DB_USER:", os.getenv("DB_USER"))
+print("🔧 DB_HOST:", os.getenv("DB_HOST"), "DB_PORT:", os.getenv("DB_PORT"))
+
+# --- Initialize Embedding Model ---
+model = SentenceTransformer("BAAI/bge-small-en-v1.5")
 
 # --- Database Connection (Secure) ---
 def get_db_connection():
-    """Secure PostgreSQL connection with error handling"""
+    """Read DB params from .env and return a psycopg2 connection."""
+    required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"]
+    missing = [var for var in required_vars if not os.getenv(var)]
+    if missing:
+        raise RuntimeError(f"❌ Missing required DB env vars: {', '.join(missing)}")
+
     try:
-        return psycopg2.connect(
-            dbname=os.environ.get("DB_NAME", "ragdb"),
-            user=os.environ.get("DB_USER", "postgres"),
-            password=os.environ["DB_PASSWORD"],  # Mandatory
-            host=os.environ.get("DB_HOST", "localhost"),
-            port=os.environ.get("DB_PORT", "5432")
+        conn = psycopg2.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT")
         )
-    except (psycopg2.Error, KeyError) as e:
+        # Debug: verify connected database
+        with conn.cursor() as debug_cur:
+            debug_cur.execute("SELECT current_database()")
+            db = debug_cur.fetchone()[0]
+            print(f"✅ Connected to database: {db}")
+        return conn
+    except psycopg2.Error as e:
         print(f"❌ Database connection failed: {e}")
         exit(1)
 
+# Create connection and cursor
 conn = get_db_connection()
 cur = conn.cursor()
 
 # --- Core Functions ---
 def extract_pdf_text(pdf_path):
-    """Extract text from PDF with error handling"""
+    """Extract and return all text from a PDF."""
     try:
+        text_pages = []
         with fitz.open(pdf_path) as doc:
-            return "".join(page.get_text() for page in doc)
+            for page in doc:
+                text_pages.append(page.get_text())
+        return "\n".join(text_pages)
     except Exception as e:
         print(f"❌ PDF extraction failed: {e}")
         exit(1)
 
 def get_embedding(text):
-    """Get OpenAI embedding with rate limit handling"""
+    """Generate and return an embedding list from local BGE model."""
     try:
-        response = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text
-        )
-        return response.data[0].embedding
-    except RateLimitError:
-        print("❌ OpenAI rate limit exceeded. Check your quota.")
-        exit(1)
+        embedding = model.encode(text)
+        return embedding.tolist()
     except Exception as e:
-        print(f"❌ Embedding failed: {e}")
+        print(f"❌ Embedding generation failed: {e}")
         exit(1)
 
 def insert_into_db(filename, country, target_group, owner, full_text, embedding):
-    """Safe database insertion with transaction rollback"""
+    """Insert a document record into the database."""
     try:
-        cur.execute("""
-            INSERT INTO documents 
+        cur.execute(
+            """
+            INSERT INTO documents
             (filename, country, target_group, owner, creation_date, full_text, content_embedding)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (filename, country, target_group, owner, date.today(), full_text, embedding))
+            """,
+            (
+                filename,
+                country,
+                target_group,
+                owner,
+                date.today(),
+                full_text,
+                embedding
+            )
+        )
         conn.commit()
     except psycopg2.Error as e:
         print(f"❌ Database insert failed: {e}")
@@ -74,31 +95,30 @@ def insert_into_db(filename, country, target_group, owner, full_text, embedding)
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    try:
-        pdf_path = "Ketan_Darekar_CV.pdf"
-        
-        if not os.path.exists(pdf_path):
-            raise FileNotFoundError(f"❌ PDF not found at: {os.path.abspath(pdf_path)}")
-        
-        print("📄 Extracting text...")
-        text = extract_pdf_text(pdf_path)
-        
-        print("🔢 Generating embedding...")
-        embedding = get_embedding(text)
-        
-        print("💾 Saving to database...")
-        insert_into_db(
-            filename=os.path.basename(pdf_path),
-            country="Germany",
-            target_group="Students",
-            owner="Ketan",
-            full_text=text,
-            embedding=embedding
-        )
-        print("✅ Success! PDF processed and stored.")
-        
-    except Exception as e:
-        print(f"❌ Critical error: {e}")
-    finally:
-        cur.close()
-        conn.close()
+    pdf_path = "Ketan_Darekar_CV.pdf"  # Update to your PDF file
+    if not os.path.exists(pdf_path):
+        print(f"❌ PDF not found at: {os.path.abspath(pdf_path)}")
+        exit(1)
+
+    print("📄 Extracting text from PDF...")
+    text = extract_pdf_text(pdf_path)
+    print(f"   Extracted {len(text)} characters.")
+
+    print("🔢 Generating embedding...")
+    embedding = get_embedding(text)
+    print(f"   Embedding vector length: {len(embedding)}.")
+
+    print("💾 Inserting into database...")
+    insert_into_db(
+        filename=os.path.basename(pdf_path),
+        country="Germany",
+        target_group="Students",
+        owner="Ketan",
+        full_text=text,
+        embedding=embedding
+    )
+    print("✅ Success! PDF processed and stored.")
+
+    # Cleanup
+    cur.close()
+    conn.close()
