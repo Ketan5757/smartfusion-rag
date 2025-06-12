@@ -59,6 +59,19 @@ def extract_pdf_text(pdf_path):
         print(f"❌ PDF extraction failed: {e}")
         exit(1)
 
+
+def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
+    """Split text into overlapping chunks."""
+    chunks = []
+    start = 0
+    length = len(text)
+    while start < length:
+        end = min(start + chunk_size, length)
+        chunks.append(text[start:end])
+        start += chunk_size - overlap
+    return chunks
+
+
 def get_embedding(text):
     """Generate and return an embedding list from local BGE model."""
     try:
@@ -67,6 +80,7 @@ def get_embedding(text):
     except Exception as e:
         print(f"❌ Embedding generation failed: {e}")
         exit(1)
+
 
 def insert_into_db(filename, country, target_group, owner, full_text, embedding):
     """Insert a document record into the database."""
@@ -101,23 +115,27 @@ if __name__ == "__main__":
         exit(1)
 
     print("📄 Extracting text from PDF...")
-    text = extract_pdf_text(pdf_path)
-    print(f"   Extracted {len(text)} characters.")
+    full_text = extract_pdf_text(pdf_path)
+    print(f"   Extracted {len(full_text)} characters.")
 
-    print("🔢 Generating embedding...")
-    embedding = get_embedding(text)
-    print(f"   Embedding vector length: {len(embedding)}.")
+    # --- Chunk PDF text ---
+    print("🔀 Splitting text into chunks...")
+    pdf_chunks = chunk_text(full_text, chunk_size=1000, overlap=200)
+    print(f"   Generated {len(pdf_chunks)} chunks.")
 
-    print("💾 Inserting into database...")
-    insert_into_db(
-        filename=os.path.basename(pdf_path),
-        country="Germany",
-        target_group="Students",
-        owner="Ketan",
-        full_text=text,
-        embedding=embedding
-    )
-    print("✅ Success! PDF processed and stored.")
+    # --- Embed & insert each chunk ---
+    for idx, chunk in enumerate(pdf_chunks):
+        print(f"   Processing chunk {idx+1}/{len(pdf_chunks)}...")
+        emb = get_embedding(chunk)
+        insert_into_db(
+            filename=f"{os.path.basename(pdf_path)}_chunk{idx}",
+            country="Germany",
+            target_group="Students",
+            owner="Ketan",
+            full_text=chunk,
+            embedding=emb
+        )
+    print("✅ All PDF chunks processed and stored.")
 
     # Cleanup
     cur.close()
