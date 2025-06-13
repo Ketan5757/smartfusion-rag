@@ -10,21 +10,28 @@ const Dashboard = () => {
   const [inputText, setInputText] = useState('');
   const [submittedText, setSubmittedText] = useState('');
   const [questionText, setQuestionText] = useState('');
-  const [chatHistory, setChatHistory] = useState([]); // { sender: 'user'|'bot', text: string }[]
+
+  // NEW: track only the last question, answer, and error
+  const [lastQuestion, setLastQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleUploadSubmit = () => {
     if (!inputText.trim()) return;
-    setSubmittedText(inputText);
+    setSubmittedText(inputText.trim());
     setInputText('');
-    // TODO: send file or URL to backend ingestion endpoint
+    // TODO: call ingestion API
   };
 
   const handleAskQuestion = async () => {
-    if (!questionText.trim()) return;
-    const userQ = questionText.trim();
-    // Add user question to history
-    setChatHistory((h) => [...h, { sender: 'user', text: userQ }]);
+    const q = questionText.trim();
+    if (!q) return;
+
+    // 1️⃣ Record lastQuestion and reset prior result
+    setLastQuestion(q);
+    setAnswer('');
+    setError('');
     setQuestionText('');
     setLoading(true);
 
@@ -32,23 +39,23 @@ const Dashboard = () => {
       const res = await fetch('http://localhost:8000/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userQ, top_k: 5 }),
+        body: JSON.stringify({ question: q, top_k: 5 }),
       });
+      if (!res.ok) {
+        const { detail } = await res.json();
+        throw new Error(detail || 'Server error');
+      }
       const { answer } = await res.json();
-      setChatHistory((h) => [...h, { sender: 'bot', text: answer }]);
+      setAnswer(answer);
     } catch (err) {
-      console.error(err);
-      setChatHistory((h) => [
-        ...h,
-        { sender: 'bot', text: '❌ Something went wrong. Please try again.' },
-      ]);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleMicInput = () => {
-    console.log('Mic icon clicked – implement STT here');
+    console.log('Mic clicked – implement STT here');
   };
 
   return (
@@ -56,6 +63,7 @@ const Dashboard = () => {
       <Header />
 
       <div className="dashboard-wrapper">
+        {/* Left panel: Chat History remains unchanged (no questions are added here) */}
         <div className="dashboard-left">
           <h2>SmartFusion RAG</h2>
           <p>
@@ -67,82 +75,61 @@ const Dashboard = () => {
             <br />
             responses from PDFs, websites, and voice input.
           </p>
-
           <div className="chat-history-box">
             <h3>Chat History</h3>
             <div className="messages">
-              {chatHistory.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`message ${msg.sender === 'user' ? 'user' : 'bot'}`}
-                >
-                  {msg.text}
-                </div>
-              ))}
-              {loading && <div className="message bot">⏳ Thinking…</div>}
+              <div className="message placeholder">No messages yet...</div>
             </div>
           </div>
         </div>
 
+        {/* Right panel: Upload + Question + Inline Q&A */}
         <div className="dashboard-right">
-          <center>
-            <h1>Chat with PDFs and Webpages</h1>
-          </center>
+          <center><h1>Chat with PDFs and Webpages</h1></center>
 
+          {/* Upload Section (unchanged) */}
           <div className="upload-wrapper">
             <div className="upload-section">
-              <label className="upload-label">
-                Upload your pdf or enter link
-              </label>
+              <label className="upload-label">Upload your pdf or enter link</label>
               <div className="upload-box">
                 <input
                   type="text"
                   placeholder="Enter the website link here"
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleUploadSubmit();
-                  }}
+                  onChange={e => setInputText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleUploadSubmit()}
                 />
                 <input
                   type="file"
                   id="file-upload"
                   accept=".pdf"
                   style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) setInputText(file.name);
+                  onChange={e => {
+                    const f = e.target.files[0];
+                    if (f) setInputText(f.name);
                   }}
                 />
                 <label htmlFor="file-upload" title="Upload PDF">
-                  <img
-                    src={uploadIcon}
-                    alt="Upload PDF"
-                    className="upload-icon"
-                  />
+                  <img src={uploadIcon} className="upload-icon" alt="Upload PDF" />
                 </label>
                 <img
                   src={sendIcon}
-                  alt="Submit"
                   className="upload-icon"
-                  title="Submit"
+                  alt="Submit"
                   onClick={handleUploadSubmit}
                 />
               </div>
             </div>
+            {submittedText && (
+              <div className="submitted-output">
+                Uploaded: {submittedText.length > 50
+                  ? submittedText.slice(0, 50) + '…'
+                  : submittedText}
+              </div>
+            )}
           </div>
 
-          {submittedText && (
-            <div className="submitted-output">
-              <p>
-                Uploaded:{' '}
-                {submittedText.length > 50
-                  ? submittedText.slice(0, 50) + '...'
-                  : submittedText}
-              </p>
-            </div>
-          )}
-
+          {/* Question Section with inline Q&A */}
           <div className="question-row">
             <label className="question-label">Ask Questions about</label>
             <div className="upload-box">
@@ -150,25 +137,43 @@ const Dashboard = () => {
                 type="text"
                 placeholder="Ask your question here"
                 value={questionText}
-                onChange={(e) => setQuestionText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAskQuestion();
-                }}
+                onChange={e => setQuestionText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAskQuestion()}
                 disabled={loading}
               />
               <img
                 src={micIcon}
-                alt="Mic"
                 className="upload-icon"
+                alt="Mic"
                 onClick={handleMicInput}
               />
               <img
                 src={sendIcon}
-                alt="Send"
                 className="upload-icon"
+                alt="Send"
                 onClick={handleAskQuestion}
               />
             </div>
+
+            {/* 2️⃣ Show the question below the input */}
+            {lastQuestion && (
+              <div className="last-question">  {lastQuestion}</div>
+            )}
+
+            {/* 3️⃣ Show “Thinking…” while loading */}
+            {loading && (
+              <div className="loading-indicator">⏳ Thinking…</div>
+            )}
+
+            {/* 4️⃣ Show the answer once received */}
+            {answer && (
+              <div className="answer-text">✅ {answer}</div>
+            )}
+
+            {/* 5️⃣ Show any error */}
+            {error && (
+              <div className="error-text">❌ {error}</div>
+            )}
           </div>
         </div>
       </div>
