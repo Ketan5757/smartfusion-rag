@@ -11,29 +11,69 @@ const Dashboard = () => {
   const [submittedText, setSubmittedText] = useState('');
   const [questionText, setQuestionText] = useState('');
 
-  // NEW: track only the last question, answer, and error
+  // Track only the last question, answer, and error
   const [lastQuestion, setLastQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleUploadSubmit = () => {
-    if (!inputText.trim()) return;
-    setSubmittedText(inputText.trim());
+  // Separate loading states for upload and query
+  const [uploading, setUploading] = useState(false);
+  const [queryLoading, setQueryLoading] = useState(false);
+
+  // Track selected file for upload
+  const [file, setFile] = useState(null);
+
+  // Handle PDF upload + ingestion
+  const handleUploadSubmit = async () => {
+    if (!file) return;
+    setSubmittedText(file.name);
     setInputText('');
-    // TODO: call ingestion API
+    setError('');
+    setAnswer('');
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const queryParams = new URLSearchParams({
+        country: 'Germany',
+        target_group: 'Students',
+        owner: 'Ketan',
+      });
+
+      const res = await fetch(
+        `http://localhost:8000/ingest_pdf?${queryParams.toString()}`,
+        { method: 'POST', body: formData }
+      );
+
+      if (!res.ok) {
+        const { detail } = await res.json();
+        throw new Error(detail || 'Upload failed');
+      }
+
+      const { detail } = await res.json();
+      setAnswer(detail); // show ingestion result as the “answer”
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      setFile(null);
+      const fileInput = document.getElementById('file-upload');
+      if (fileInput) fileInput.value = '';
+    }
   };
 
+  // Handle asking a question
   const handleAskQuestion = async () => {
     const q = questionText.trim();
     if (!q) return;
 
-    // 1️⃣ Record lastQuestion and reset prior result
     setLastQuestion(q);
     setAnswer('');
     setError('');
     setQuestionText('');
-    setLoading(true);
+    setQueryLoading(true);
 
     try {
       const res = await fetch('http://localhost:8000/answer', {
@@ -41,16 +81,18 @@ const Dashboard = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q, top_k: 5 }),
       });
+
       if (!res.ok) {
         const { detail } = await res.json();
         throw new Error(detail || 'Server error');
       }
+
       const { answer } = await res.json();
       setAnswer(answer);
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setQueryLoading(false);
     }
   };
 
@@ -63,7 +105,7 @@ const Dashboard = () => {
       <Header />
 
       <div className="dashboard-wrapper">
-        {/* Left panel: Chat History remains unchanged (no questions are added here) */}
+        {/* Left panel: Chat History unchanged */}
         <div className="dashboard-left">
           <h2>SmartFusion RAG</h2>
           <p>
@@ -87,7 +129,7 @@ const Dashboard = () => {
         <div className="dashboard-right">
           <center><h1>Chat with PDFs and Webpages</h1></center>
 
-          {/* Upload Section (unchanged) */}
+          {/* Upload Section */}
           <div className="upload-wrapper">
             <div className="upload-section">
               <label className="upload-label">Upload your pdf or enter link</label>
@@ -98,6 +140,7 @@ const Dashboard = () => {
                   value={inputText}
                   onChange={e => setInputText(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleUploadSubmit()}
+                  disabled={uploading}
                 />
                 <input
                   type="file"
@@ -106,8 +149,12 @@ const Dashboard = () => {
                   style={{ display: 'none' }}
                   onChange={e => {
                     const f = e.target.files[0];
-                    if (f) setInputText(f.name);
+                    if (f) {
+                      setFile(f);
+                      setInputText(f.name);
+                    }
                   }}
+                  disabled={uploading}
                 />
                 <label htmlFor="file-upload" title="Upload PDF">
                   <img src={uploadIcon} className="upload-icon" alt="Upload PDF" />
@@ -129,7 +176,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Question Section with inline Q&A */}
+          {/* Question Section */}
           <div className="question-row">
             <label className="question-label">Ask Questions about</label>
             <div className="upload-box">
@@ -139,7 +186,7 @@ const Dashboard = () => {
                 value={questionText}
                 onChange={e => setQuestionText(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAskQuestion()}
-                disabled={loading}
+                disabled={queryLoading}
               />
               <img
                 src={micIcon}
@@ -155,22 +202,22 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* 2️⃣ Show the question below the input */}
+            {/* Show question once asked */}
             {lastQuestion && (
-              <div className="last-question">  {lastQuestion}</div>
+              <div className="last-question">{lastQuestion}</div>
             )}
 
-            {/* 3️⃣ Show “Thinking…” while loading */}
-            {loading && (
+            {/* Show thinking only during query */}
+            {queryLoading && (
               <div className="loading-indicator">⏳ Thinking…</div>
             )}
 
-            {/* 4️⃣ Show the answer once received */}
+            {/* Show answer */}
             {answer && (
               <div className="answer-text">✅ {answer}</div>
             )}
 
-            {/* 5️⃣ Show any error */}
+            {/* Show error */}
             {error && (
               <div className="error-text">❌ {error}</div>
             )}

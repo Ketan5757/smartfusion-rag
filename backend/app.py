@@ -1,13 +1,21 @@
 import os
 from datetime import date
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 import fitz  # PyMuPDF
 import psycopg2
 import openai
+import requests
+from bs4 import BeautifulSoup
+import tempfile
+
+# ── Setup upload directory ──
+BASE_DIR = os.path.dirname(__file__)
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # ── Load env & initialize clients ──
 load_dotenv()
@@ -32,6 +40,7 @@ app.add_middleware(
 )
 
 # ── Database connection helper ──
+
 def get_db_connection():
     try:
         return psycopg2.connect(
@@ -45,6 +54,7 @@ def get_db_connection():
         raise HTTPException(status_code=500, detail=f"DB connection failed: {e}")
 
 # ── PDF extraction & chunking ──
+
 def extract_pdf_text(path: str) -> str:
     try:
         pages = []
@@ -63,25 +73,22 @@ def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[st
         start += chunk_size - overlap
     return chunks
 
-# ── Ingest endpoint ──
+# ── Ingest PDF endpoint ──
 @app.post("/ingest_pdf")
 async def ingest_pdf(
     file: UploadFile = File(...),
-    country: str = "Unknown",
-    target_group: str = "Unknown",
-    owner: str = "Unknown"
+    country: str = Query("Unknown"),
+    target_group: str = Query("Unknown"),
+    owner: str = Query("Unknown")
 ):
-    # 1) Save uploaded file
-    temp_path = f"/tmp/{file.filename}"
+    # save uploaded file to uploads directory
+    temp_path = os.path.join(UPLOAD_DIR, file.filename)
     contents = await file.read()
     with open(temp_path, "wb") as f:
         f.write(contents)
 
-    # 2) Extract & chunk
     full_text = extract_pdf_text(temp_path)
     chunks = chunk_text(full_text)
-
-    # 3) Embed & insert
     conn = get_db_connection()
     cur = conn.cursor()
     for chunk in chunks:
@@ -97,8 +104,38 @@ async def ingest_pdf(
     conn.commit()
     cur.close()
     conn.close()
-
     return {"detail": f"Ingested {len(chunks)} chunks from {file.filename}"}
+
+# ── Ingest URL endpoint ──
+@app.post("/ingest_url")
+async def ingest_url(
+    url: str = Query(..., description="Webpage URL to ingest"),
+    country: str = Query("Unknown"),
+    target_group: str = Query("Unknown"),
+    owner: str = Query("Unknown")
+):
+    resp = requests.get(url)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch {url}: {resp.status_code}")
+    soup = BeautifulSoup(resp.text, "html.parser")
+    full_text = " ".join(soup.stripped_strings)
+    chunks = chunk_text(full_text)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    for i, chunk in enumerate(chunks):
+        emb = model.encode(chunk).tolist()
+        cur.execute(
+            """
+            INSERT INTO documents
+              (filename, country, target_group, owner, creation_date, full_text, content_embedding)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (f"{url}_chunk{i}", country, target_group, owner, date.today(), chunk, emb)
+        )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"detail": f"Ingested {len(chunks)} chunks from {url}"}
 
 # ── Retrieval logic ──
 def retrieve(query: str, k: int = 5):
@@ -136,17 +173,12 @@ def ask_question(req: QueryRequest):
 @app.post("/answer")
 def answer_question(req: QueryRequest):
     try:
-        # 1. fetch chunks
         hits = retrieve(req.question, req.top_k)
         context = "\n\n".join(snip for _, snip in hits)
-
-        # 2. build prompt
         prompt = (
             "Use the following context to answer the question:\n\n"
             f"{context}\n\nQuestion: {req.question}\nAnswer:"
         )
-
-        # 3. call ChatCompletion
         resp = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -156,7 +188,6 @@ def answer_question(req: QueryRequest):
         )
         answer = resp.choices[0].message.content
         return {"answer": answer}
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -165,4 +196,4 @@ def answer_question(req: QueryRequest):
 def on_startup():
     print("🔌 SmartFusion RAG API starting…")
     print(f"✔️  OpenAI key loaded: {'yes' if openai.api_key else 'no'}")
-    print("🚀  Endpoints: POST /ingest_pdf, /query, /answer")
+    print("🚀  Endpoints: POST /ingest_pdf, /ingest_url, /query, /answer")
