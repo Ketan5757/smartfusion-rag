@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sentence-transformers
+requests
+beautifulsoup4
+python-dotenv
+psycopg2-binary
+openai
+pymupdf

@@ -25,45 +25,42 @@ const Dashboard = () => {
 
   // Handle PDF upload + ingestion
   const handleUploadSubmit = async () => {
-    if (!file) return;
-    setSubmittedText(file.name);
-    setInputText('');
-    setError('');
-    setAnswer('');
-    setUploading(true);
+  if (!file) return;
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+  setSubmittedText(file.name);
+  setInputText('');
+  setError('');
+  setAnswer('');
+  setUploading(true);
 
-      const queryParams = new URLSearchParams({
-        country: 'Germany',
-        target_group: 'Students',
-        owner: 'Ketan',
-      });
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('country', 'Germany');
+    formData.append('target_group', 'Students');
+    formData.append('owner', 'Ketan');
 
-      const res = await fetch(
-        `http://localhost:8000/ingest_pdf?${queryParams.toString()}`,
-        { method: 'POST', body: formData }
-      );
-
-      if (!res.ok) {
-        const { detail } = await res.json();
-        throw new Error(detail || 'Upload failed');
-      }
-
-      const { detail } = await res.json();
-      setAnswer(detail); // show ingestion result as the “answer”
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setUploading(false);
-      setFile(null);
-      const fileInput = document.getElementById('file-upload');
-      if (fileInput) fileInput.value = '';
+    const res = await fetch('http://localhost:8000/ingest_pdf', {
+      method: 'POST',
+      body: formData,
+    });
+    const payload = await res.json();
+    if (!res.ok) {
+      throw new Error(payload.detail || 'Upload failed');
     }
-  };
 
+    // Show both the ingestion message and byte count
+    const { detail, written_bytes } = payload;
+    setAnswer(`${detail} (saved ${written_bytes.toLocaleString()} bytes)`);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setUploading(false);
+    setFile(null);
+    const fileInput = document.getElementById('file-upload');
+    if (fileInput) fileInput.value = '';
+  }
+};
   // Handle asking a question
   const handleAskQuestion = async () => {
     const q = questionText.trim();

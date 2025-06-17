@@ -1,7 +1,8 @@
 import os
+import shutil
 from datetime import date
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
@@ -10,7 +11,6 @@ import psycopg2
 import openai
 import requests
 from bs4 import BeautifulSoup
-import tempfile
 
 # ── Setup upload directory ──
 BASE_DIR = os.path.dirname(__file__)
@@ -40,7 +40,6 @@ app.add_middleware(
 )
 
 # ── Database connection helper ──
-
 def get_db_connection():
     try:
         return psycopg2.connect(
@@ -54,7 +53,6 @@ def get_db_connection():
         raise HTTPException(status_code=500, detail=f"DB connection failed: {e}")
 
 # ── PDF extraction & chunking ──
-
 def extract_pdf_text(path: str) -> str:
     try:
         pages = []
@@ -73,20 +71,42 @@ def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[st
         start += chunk_size - overlap
     return chunks
 
-# ── Ingest PDF endpoint ──
+# ── Ingest PDF endpoint (with diagnostics) ──
 @app.post("/ingest_pdf")
 async def ingest_pdf(
     file: UploadFile = File(...),
-    country: str = Query("Unknown"),
-    target_group: str = Query("Unknown"),
-    owner: str = Query("Unknown")
+    country: str = Form("Unknown"),
+    target_group: str = Form("Unknown"),
+    owner: str = Form("Unknown"),
 ):
-    # save uploaded file to uploads directory
+    # 1) Stream-save the upload to disk
     temp_path = os.path.join(UPLOAD_DIR, file.filename)
-    contents = await file.read()
-    with open(temp_path, "wb") as f:
-        f.write(contents)
+    file.file.seek(0)
+    with open(temp_path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
 
+    # 2) Measure bytes written
+    size = os.path.getsize(temp_path)
+
+    # 3) Attempt to open with PyMuPDF & check for encryption/errors
+    open_error = None
+    try:
+        doc = fitz.open(temp_path)
+        if doc.is_encrypted and not doc.authenticate(""):
+            open_error = "encrypted or password-protected"
+        doc.close()
+    except Exception as e:
+        open_error = str(e)
+
+    # 4) If open failed, return diagnostics immediately
+    if open_error:
+        return {
+            "detail": "🚨 PDF open failed",
+            "written_bytes": size,
+            "open_error": open_error
+        }
+
+    # 5) Otherwise proceed with extraction, chunking & DB insert
     full_text = extract_pdf_text(temp_path)
     chunks = chunk_text(full_text)
     conn = get_db_connection()
@@ -104,7 +124,12 @@ async def ingest_pdf(
     conn.commit()
     cur.close()
     conn.close()
-    return {"detail": f"Ingested {len(chunks)} chunks from {file.filename}"}
+
+    # 6) Return success with the same diagnostics
+    return {
+        "detail": f"Ingested {len(chunks)} chunks from {file.filename}",
+        "written_bytes": size
+    }
 
 # ── Ingest URL endpoint ──
 @app.post("/ingest_url")
