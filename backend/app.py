@@ -1,6 +1,7 @@
 import os
 import shutil
 from datetime import date
+from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,7 +53,7 @@ def get_db_connection():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB connection failed: {e}")
 
-# ── PDF extraction & chunking ──
+# ── PDF/Text extraction & chunking ──
 def extract_pdf_text(path: str) -> str:
     try:
         pages = []
@@ -71,7 +72,7 @@ def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[st
         start += chunk_size - overlap
     return chunks
 
-# ── Ingest PDF endpoint (with diagnostics) ──
+# ── Ingest PDF endpoint ──
 @app.post("/ingest_pdf")
 async def ingest_pdf(
     file: UploadFile = File(...),
@@ -79,16 +80,12 @@ async def ingest_pdf(
     target_group: str = Form("Unknown"),
     owner: str = Form("Unknown"),
 ):
-    # 1) Stream-save the upload to disk
     temp_path = os.path.join(UPLOAD_DIR, file.filename)
     file.file.seek(0)
     with open(temp_path, "wb") as out:
         shutil.copyfileobj(file.file, out)
 
-    # 2) Measure bytes written
     size = os.path.getsize(temp_path)
-
-    # 3) Attempt to open with PyMuPDF & check for encryption/errors
     open_error = None
     try:
         doc = fitz.open(temp_path)
@@ -98,7 +95,6 @@ async def ingest_pdf(
     except Exception as e:
         open_error = str(e)
 
-    # 4) If open failed, return diagnostics immediately
     if open_error:
         return {
             "detail": "🚨 PDF open failed",
@@ -106,7 +102,6 @@ async def ingest_pdf(
             "open_error": open_error
         }
 
-    # 5) Otherwise proceed with extraction, chunking & DB insert
     full_text = extract_pdf_text(temp_path)
     chunks = chunk_text(full_text)
     conn = get_db_connection()
@@ -125,7 +120,6 @@ async def ingest_pdf(
     cur.close()
     conn.close()
 
-    # 6) Return success with the same diagnostics
     return {
         "detail": f"Ingested {len(chunks)} chunks from {file.filename}",
         "written_bytes": size
@@ -145,6 +139,7 @@ async def ingest_url(
     soup = BeautifulSoup(resp.text, "html.parser")
     full_text = " ".join(soup.stripped_strings)
     chunks = chunk_text(full_text)
+
     conn = get_db_connection()
     cur = conn.cursor()
     for i, chunk in enumerate(chunks):
@@ -160,22 +155,36 @@ async def ingest_url(
     conn.commit()
     cur.close()
     conn.close()
+
     return {"detail": f"Ingested {len(chunks)} chunks from {url}"}
 
 # ── Retrieval logic ──
-def retrieve(query: str, k: int = 5):
+def retrieve(
+    query: str,
+    k: int,
+    filename: Optional[str] = None
+):
     q_emb = model.encode(query).tolist()
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT filename, substring(full_text,1,150) AS snippet
-        FROM documents
-        ORDER BY content_embedding <=> (%s)::vector
-        LIMIT %s
-        """,
-        (q_emb, k),
-    )
+
+    sql = """
+      SELECT
+        filename,
+        full_text,
+        content_embedding <=> (%s)::vector AS distance
+      FROM documents
+    """
+    params = [q_emb]
+
+    if filename:
+        sql += " WHERE filename = %s"
+        params.append(filename)
+
+    sql += " ORDER BY distance ASC LIMIT %s"
+    params.append(k)
+
+    cur.execute(sql, params)
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -184,35 +193,48 @@ def retrieve(query: str, k: int = 5):
 # ── Request schema ──
 class QueryRequest(BaseModel):
     question: str
-    top_k: int = 5
+    top_k:    int              = 5
+    filename: Optional[str]    = None
 
-# ── Endpoints ──
+# ── Query endpoint ──
 @app.post("/query")
 def ask_question(req: QueryRequest):
     try:
-        hits = retrieve(req.question, req.top_k)
-        return [{"filename": fn, "snippet": snip} for fn, snip in hits]
+        hits = retrieve(req.question, req.top_k, req.filename)
+        return [
+            {"filename": fn, "snippet": snip}
+            for fn, snip, _ in hits
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ── Answer endpoint ──
 @app.post("/answer")
 def answer_question(req: QueryRequest):
     try:
-        hits = retrieve(req.question, req.top_k)
-        context = "\n\n".join(snip for _, snip in hits)
+        hits = retrieve(req.question, req.top_k, req.filename)
+        context = "\n\n".join(text for _, text, _ in hits)
+
         prompt = (
-            "Use the following context to answer the question:\n\n"
-            f"{context}\n\nQuestion: {req.question}\nAnswer:"
+            "You are a helpful assistant. Use ONLY the context below to answer.\n\n"
+            f"Context:\n{context}\n\n"
+            f"Question: {req.question}\nAnswer:"
         )
         resp = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
+                {"role": "user",   "content": prompt},
             ],
         )
-        answer = resp.choices[0].message.content
-        return {"answer": answer}
+        answer = resp.choices[0].message.content.strip()
+
+        sources = []
+        for fn, _, dist in hits:
+            sim = 1.0 / (1.0 + dist)
+            sources.append({"filename": fn, "similarity": round(sim, 3)})
+
+        return {"answer": answer, "sources": sources}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
