@@ -159,33 +159,30 @@ async def ingest_url(
     return {"detail": f"Ingested {len(chunks)} chunks from {url}"}
 
 # ── Retrieval logic ──
-def retrieve(
-    query: str,
-    k: int,
-    filename: Optional[str] = None
-):
+def retrieve(query: str, k: int = 5):
+    # 1) Encode the user’s question
     q_emb = model.encode(query).tolist()
-    conn = get_db_connection()
-    cur = conn.cursor()
 
+    # 2) Build a global search over all chunks
     sql = """
-      SELECT
-        filename,
-        full_text,
-        content_embedding <=> (%s)::vector AS distance
-      FROM documents
+      SELECT filename,
+             full_text,
+             content_embedding <=> (%s)::vector AS distance
+        FROM documents
+       ORDER BY distance ASC
+       LIMIT %s
     """
-    params = [q_emb]
+    params = [q_emb, k]
 
-    if filename:
-        sql += " WHERE filename = %s"
-        params.append(filename)
+    # (optional) debug print
+    print("🔍 SQL:", sql.replace("\n", " "))
+    print("🔢 params:", params)
 
-    sql += " ORDER BY distance ASC LIMIT %s"
-    params.append(k)
-
+    conn = get_db_connection()
+    cur  = conn.cursor()
     cur.execute(sql, params)
     rows = cur.fetchall()
+    print(f"✅ Retrieved {len(rows)} chunks across all PDFs")
     cur.close()
     conn.close()
     return rows
@@ -200,7 +197,8 @@ class QueryRequest(BaseModel):
 @app.post("/query")
 def ask_question(req: QueryRequest):
     try:
-        hits = retrieve(req.question, req.top_k, req.filename)
+        # retrieve across all PDFs
+        hits = retrieve(req.question, req.top_k)
         return [
             {"filename": fn, "snippet": snip}
             for fn, snip, _ in hits
@@ -208,13 +206,18 @@ def ask_question(req: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # ── Answer endpoint ──
 @app.post("/answer")
 def answer_question(req: QueryRequest):
     try:
-        hits = retrieve(req.question, req.top_k, req.filename)
-        context = "\n\n".join(text for _, text, _ in hits)
+        # 1) fetch top-k chunks globally
+        hits = retrieve(req.question, req.top_k)
 
+        # 2) build the combined context
+        context = "\n\n".join(chunk for _, chunk, _ in hits)
+
+        # 3) ask GPT using only that context
         prompt = (
             "You are a helpful assistant. Use ONLY the context below to answer.\n\n"
             f"Context:\n{context}\n\n"
@@ -223,21 +226,23 @@ def answer_question(req: QueryRequest):
         resp = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user",   "content": prompt},
+                {"role": "system",  "content": "You are a helpful assistant."},
+                {"role": "user",    "content": prompt},
             ],
         )
         answer = resp.choices[0].message.content.strip()
 
-        sources = []
-        for fn, _, dist in hits:
-            sim = 1.0 / (1.0 + dist)
-            sources.append({"filename": fn, "similarity": round(sim, 3)})
+        # 4) return the answer plus which files it came from
+        sources = [
+            {"filename": fn, "similarity": round(1.0/(1.0+dist), 3)}
+            for fn, _, dist in hits
+        ]
 
         return {"answer": answer, "sources": sources}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 # ── Startup log ──
 @app.on_event("startup")
 def on_startup():

@@ -63,35 +63,42 @@ const Dashboard = () => {
 };
   // Handle asking a question
   const handleAskQuestion = async () => {
-    const q = questionText.trim();
-    if (!q) return;
+  const q = questionText.trim();
+  if (!q) return;
 
-    setLastQuestion(q);
-    setAnswer('');
-    setError('');
-    setQuestionText('');
-    setQueryLoading(true);
+  // reset UI state
+  setLastQuestion(q);
+  setAnswer('');
+  setError('');
+  setQuestionText('');
+  setQueryLoading(true);
 
-    try {
-      const res = await fetch('http://localhost:8000/answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q, top_k: 5 }),
-      });
+  try {
+    // call the /answer endpoint, including the uploaded file’s name
+    const response = await fetch('http://localhost:8000/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question:  q,
+        top_k:     5,
+        filename:  submittedText   // ← this must be a real string, not undefined
+        }),
+    });
 
-      if (!res.ok) {
-        const { detail } = await res.json();
-        throw new Error(detail || 'Server error');
-      }
-
-      const { answer } = await res.json();
-      setAnswer(answer);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setQueryLoading(false);
+    if (!response.ok) {
+      const payload = await response.json();
+      throw new Error(payload.detail || 'Server error');
     }
-  };
+
+    const data = await response.json();
+    setAnswer(data.answer);
+    // If you want to show sources later, they’re in data.sources
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setQueryLoading(false);
+  }
+};
 
   const handleMicInput = () => {
     console.log('Mic clicked – implement STT here');
