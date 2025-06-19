@@ -34,6 +34,52 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
+.dashboard-left {
+  width: 260px;
+  padding: 1rem;
+  box-sizing: border-box;
+  overflow-y: auto;                   /* make it scrollable */
+  max-height: calc(100vh - 2rem);     /* allow for header/footer */
+  border-right: 1px solid #e0e0e0;
+}
+
+ol.stored-docs-list {
+  list-style-type: decimal !important;
+  list-style-position: inside;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+/* make sure li’s inside it have no “none” overriding them */
+ol.stored-docs-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;            /* space between the button and filename */
+  margin-bottom: 0.5rem;  /* space between items */
+  word-break: break-all;
+}
+
+.stored-docs-list .delete-button {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stored-docs-list .delete-button:hover {
+  color: #e00;
+}
+
+.placeholder {
+  color: #666;
+  font-style: italic;
+}
+
+/* rest of your existing styles… */
+
+
 /*Dashboard division*/
 .dashboard-wrapper {
   display: flex;

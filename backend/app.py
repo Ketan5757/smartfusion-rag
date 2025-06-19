@@ -12,6 +12,8 @@ import psycopg2
 import openai
 import requests
 from bs4 import BeautifulSoup
+from fastapi import Query
+
 
 # ── Setup upload directory ──
 BASE_DIR = os.path.dirname(__file__)
@@ -242,6 +244,34 @@ def answer_question(req: QueryRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+    # ── List all stored filenames ──
+@app.get("/documents")
+def list_documents():
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    cur.execute("""
+      SELECT filename
+        FROM documents
+    GROUP BY filename
+    ORDER BY MAX(creation_date) DESC
+    """)
+    files = [row[0] for row in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return files
+
+# ── Delete a document’s chunks by filename ──
+@app.delete("/documents")
+def delete_document(filename: str = Query(..., description="Filename to delete")):
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    cur.execute("DELETE FROM documents WHERE filename = %s;", (filename,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"detail": f"Deleted all chunks for {filename}"}
+
     
 # ── Startup log ──
 @app.on_event("startup")

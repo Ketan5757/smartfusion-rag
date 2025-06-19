@@ -2,134 +2,148 @@ import '../styles/Dashboard.css';
 import Header from './Header';
 import Footer from './Footer';
 import uploadIcon from '../assets/upload.png';
-import sendIcon from '../assets/send.png';
-import micIcon from '../assets/mic.png';
-import { useState } from 'react';
+import sendIcon   from '../assets/send.png';
+import micIcon    from '../assets/mic.png';
+import { useState, useEffect } from 'react';
 
 const Dashboard = () => {
-  const [inputText, setInputText] = useState('');
-  const [submittedText, setSubmittedText] = useState('');
-  const [questionText, setQuestionText] = useState('');
+  // ── Upload & query state ──
+  const [inputText, setInputText]           = useState('');
+  const [questionText, setQuestionText]     = useState('');
+  const [lastQuestion, setLastQuestion]     = useState('');
+  const [answer, setAnswer]                 = useState('');
+  const [error, setError]                   = useState('');
+  const [uploading, setUploading]           = useState(false);
+  const [queryLoading, setQueryLoading]     = useState(false);
 
-  // Track only the last question, answer, and error
-  const [lastQuestion, setLastQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [error, setError] = useState('');
+  // ── Multi‐file support ──
+  const [files, setFiles]                   = useState([]);
+  const [submittedFiles, setSubmittedFiles] = useState([]);
 
-  // Separate loading states for upload and query
-  const [uploading, setUploading] = useState(false);
-  const [queryLoading, setQueryLoading] = useState(false);
+  // ── Stored docs (left pane) ──
+  const [storedDocs, setStoredDocs] = useState([]);
 
-  // Track selected file for upload
-  const [file, setFile] = useState(null);
+  // Fetch the list of stored filenames/links on mount
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/documents');
+        if (!res.ok) throw new Error('Could not load stored docs');
+        const list = await res.json();
+       // backend already returns newest-first, so just use it
+        setStoredDocs(list);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, []);
 
-  // Handle PDF upload + ingestion
-  const handleUploadSubmit = async () => {
-  if (!file) return;
-
-  setSubmittedText(file.name);
-  setInputText('');
-  setError('');
-  setAnswer('');
-  setUploading(true);
-
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('country', 'Germany');
-    formData.append('target_group', 'Students');
-    formData.append('owner', 'Ketan');
-
-    const res = await fetch('http://localhost:8000/ingest_pdf', {
-      method: 'POST',
-      body: formData,
-    });
-    const payload = await res.json();
-    if (!res.ok) {
-      throw new Error(payload.detail || 'Upload failed');
+  // Delete an entire document by filename
+  const handleDelete = async (filename) => {
+    if (!window.confirm(`Delete all chunks for "${filename}"?`)) return;
+    try {
+      await fetch(
+        `http://localhost:8000/documents?filename=${encodeURIComponent(filename)}`,
+        { method: 'DELETE' }
+      );
+      const docsRes = await fetch('http://localhost:8000/documents');
+      const docsList = await docsRes.json();
+      setStoredDocs(docsList.reverse());
+    } catch (e) {
+      console.error(e);
     }
-
-    // Show both the ingestion message and byte count
-    const { detail, written_bytes } = payload;
-    setAnswer(`${detail} (saved ${written_bytes.toLocaleString()} bytes)`);
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setUploading(false);
-    setFile(null);
-    const fileInput = document.getElementById('file-upload');
-    if (fileInput) fileInput.value = '';
-  }
-};
-  // Handle asking a question
-  const handleAskQuestion = async () => {
-  const q = questionText.trim();
-  if (!q) return;
-
-  // reset UI state
-  setLastQuestion(q);
-  setAnswer('');
-  setError('');
-  setQuestionText('');
-  setQueryLoading(true);
-
-  try {
-    // call the /answer endpoint, including the uploaded file’s name
-    const response = await fetch('http://localhost:8000/answer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        question:  q,
-        top_k:     5,
-        filename:  submittedText   // ← this must be a real string, not undefined
-        }),
-    });
-
-    if (!response.ok) {
-      const payload = await response.json();
-      throw new Error(payload.detail || 'Server error');
-    }
-
-    const data = await response.json();
-    setAnswer(data.answer);
-    // If you want to show sources later, they’re in data.sources
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setQueryLoading(false);
-  }
-};
-
-  const handleMicInput = () => {
-    console.log('Mic clicked – implement STT here');
   };
+
+  // ── Ingest PDF(s) endpoint ──
+  const handleUploadSubmit = async () => {
+    if (files.length === 0) return;
+    setError(''); setAnswer(''); setUploading(true);
+
+    try {
+      for (let f of files) {
+        const formData = new FormData();
+        formData.append('file', f);
+        formData.append('country', 'Germany');
+        formData.append('target_group', 'Students');
+        formData.append('owner', 'Ketan');
+
+        const res = await fetch('http://localhost:8000/ingest_pdf', {
+          method: 'POST',
+          body: formData,
+        });
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload.detail || 'Upload failed');
+        setStoredDocs(prev => [f.name, ...prev]); //Shows it immediately on sidebar
+        setSubmittedFiles(prev => [ ...prev, f.name ]);
+      }
+      setAnswer(`Ingested ${files.length} file(s) successfully.`);
+      const docsRes = await fetch('http://localhost:8000/documents');
+      const docsList = await docsRes.json();
+      setStoredDocs(docsList.reverse());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      setFiles([]);
+      setInputText('');
+      const inp = document.getElementById('file-upload');
+      if (inp) inp.value = '';
+    }
+  };
+
+  // ── Ask question endpoint ──
+  const handleAskQuestion = async () => {
+    const q = questionText.trim();
+    if (!q) return;
+    setLastQuestion(q); setAnswer(''); setError(''); setQuestionText(''); setQueryLoading(true);
+
+    try {
+      const res = await fetch('http://localhost:8000/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, top_k: 5 }),
+      });
+      if (!res.ok) {
+        const { detail } = await res.json();
+        throw new Error(detail || 'Server error');
+      }
+      const { answer: ans } = await res.json();
+      setAnswer(ans);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setQueryLoading(false);
+    }
+  };
+
+  const handleMicInput = () => console.log('Mic clicked – implement STT here');
 
   return (
     <>
-      <Header />
+      <Header/>
 
       <div className="dashboard-wrapper">
-        {/* Left panel: Chat History unchanged */}
+        {/* ── LEFT PANEL ── */}
         <div className="dashboard-left">
-          <h2>SmartFusion RAG</h2>
-          <p>
-            Smarter answers. Real knowledge.
-            <br />
-            Combining retrieval and generation
-            <br />
-            for accurate, context-aware
-            <br />
-            responses from PDFs, websites, and voice input.
-          </p>
-          <div className="chat-history-box">
-            <h3>Chat History</h3>
-            <div className="messages">
-              <div className="message placeholder">No messages yet...</div>
-            </div>
-          </div>
+          <h3>Stored links &amp; docs</h3>
+          <ol className="stored-docs-list">
+            {storedDocs.length === 0
+              ? <li className="placeholder">No stored docs yet.</li>
+              : storedDocs.map(fname => (
+                  <li key={fname}>
+                    <button
+                      className="delete-button"
+                      onClick={()=>handleDelete(fname)}
+                    >×</button>
+                    {fname}
+                  </li>
+                ))
+            }
+          </ol>
         </div>
 
-        {/* Right panel: Upload + Question + Inline Q&A */}
+        {/* ── RIGHT PANEL ── */}
         <div className="dashboard-right">
           <center><h1>Chat with PDFs and Webpages</h1></center>
 
@@ -143,25 +157,23 @@ const Dashboard = () => {
                   placeholder="Enter the website link here"
                   value={inputText}
                   onChange={e => setInputText(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleUploadSubmit()}
                   disabled={uploading}
                 />
                 <input
                   type="file"
                   id="file-upload"
                   accept=".pdf"
+                  multiple
                   style={{ display: 'none' }}
                   onChange={e => {
-                    const f = e.target.files[0];
-                    if (f) {
-                      setFile(f);
-                      setInputText(f.name);
-                    }
+                    const picked = Array.from(e.target.files).slice(0,5);
+                    setFiles(picked);
+                    setInputText(picked.map(f=>f.name).join(', '));
                   }}
                   disabled={uploading}
                 />
                 <label htmlFor="file-upload" title="Upload PDF">
-                  <img src={uploadIcon} className="upload-icon" alt="Upload PDF" />
+                  <img src={uploadIcon} className="upload-icon" alt="Upload PDF"/>
                 </label>
                 <img
                   src={sendIcon}
@@ -171,11 +183,13 @@ const Dashboard = () => {
                 />
               </div>
             </div>
-            {submittedText && (
+
+            {submittedFiles.length > 0 && (
               <div className="submitted-output">
-                Uploaded: {submittedText.length > 50
-                  ? submittedText.slice(0, 50) + '…'
-                  : submittedText}
+                <strong>Uploaded:</strong>
+                <ul>
+                  {submittedFiles.map((nm,i)=> <li key={i}>{nm}</li>)}
+                </ul>
               </div>
             )}
           </div>
@@ -188,48 +202,23 @@ const Dashboard = () => {
                 type="text"
                 placeholder="Ask your question here"
                 value={questionText}
-                onChange={e => setQuestionText(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAskQuestion()}
+                onChange={e=>setQuestionText(e.target.value)}
+                onKeyDown={e=>e.key==='Enter' && handleAskQuestion()}
                 disabled={queryLoading}
               />
-              <img
-                src={micIcon}
-                className="upload-icon"
-                alt="Mic"
-                onClick={handleMicInput}
-              />
-              <img
-                src={sendIcon}
-                className="upload-icon"
-                alt="Send"
-                onClick={handleAskQuestion}
-              />
+              <img src={micIcon} className="upload-icon" alt="Mic" onClick={handleMicInput}/>
+              <img src={sendIcon} className="upload-icon" alt="Send" onClick={handleAskQuestion}/>
             </div>
 
-            {/* Show question once asked */}
-            {lastQuestion && (
-              <div className="last-question">{lastQuestion}</div>
-            )}
-
-            {/* Show thinking only during query */}
-            {queryLoading && (
-              <div className="loading-indicator">⏳ Thinking…</div>
-            )}
-
-            {/* Show answer */}
-            {answer && (
-              <div className="answer-text">✅ {answer}</div>
-            )}
-
-            {/* Show error */}
-            {error && (
-              <div className="error-text">❌ {error}</div>
-            )}
+            {lastQuestion && <div className="last-question">{lastQuestion}</div>}
+            {queryLoading  && <div className="loading-indicator">⏳ Thinking…</div>}
+            {answer       && <div className="answer-text">✅ {answer}</div>}
+            {error        && <div className="error-text">❌ {error}</div>}
           </div>
         </div>
       </div>
 
-      <Footer />
+      <Footer/>
     </>
   );
 };
