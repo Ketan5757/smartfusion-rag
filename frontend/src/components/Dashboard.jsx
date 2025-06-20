@@ -212,7 +212,7 @@ const Dashboard = () => {
 
             {lastQuestion && <div className="last-question">{lastQuestion}</div>}
             {queryLoading  && <div className="loading-indicator">⏳ Thinking…</div>}
-            {answer       && <div className="answer-text">✅ {answer}</div>}
+            {answer && (<div className="answer-box"><p>✅ {answer}</p></div>)}
             {error        && <div className="error-text">❌ {error}</div>}
           </div>
         </div>
