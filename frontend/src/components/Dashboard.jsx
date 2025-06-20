@@ -162,7 +162,7 @@ const Dashboard = () => {
                 <input
                   type="file"
                   id="file-upload"
-                  accept=".pdf"
+                  accept=".pdf,.docx"
                   multiple
                   style={{ display: 'none' }}
                   onChange={e => {

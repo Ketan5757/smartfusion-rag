@@ -242,8 +242,8 @@ ol.stored-docs-list li {
   line-height: 1.6;
   white-space: pre-wrap;
   margin-top: 10px;
-  width: 80%;        /* 🔥 wider box */
-  margin-left: auto; /* center horizontally */
+  width: 80%;        
+  margin-left: auto; 
   margin-right: auto;
 }
 

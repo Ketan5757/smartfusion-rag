@@ -7,3 +7,4 @@ python-dotenv
 psycopg2-binary
 openai
 pymupdf
+langchain>=0.1.0

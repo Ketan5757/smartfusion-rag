@@ -13,6 +13,7 @@ import openai
 import requests
 from bs4 import BeautifulSoup
 from fastapi import Query
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 # ── Setup upload directory ──
@@ -61,18 +62,23 @@ def extract_pdf_text(path: str) -> str:
         pages = []
         with fitz.open(path) as doc:
             for page in doc:
-                pages.append(page.get_text())
+                # Use block layout to preserve structure
+                blocks = page.get_text("blocks")  # (x0, y0, x1, y1, "text", block_no, block_type)
+                blocks = sorted(blocks, key=lambda b: (b[1], b[0]))  # sort top-to-bottom, then left-to-right
+                page_text = "\n".join(block[4].strip() for block in blocks if block[4].strip())
+                pages.append(page_text)
         return "\n".join(pages)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF extraction failed: {e}")
 
-def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
-    chunks, start, L = [], 0, len(text)
-    while start < L:
-        end = min(start + chunk_size, L)
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
-    return chunks
+def chunk_text(text: str, chunk_size: int = 800, overlap: int = 100) -> list[str]:
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=overlap,
+        separators=["\n\n", "\n", ".", " "],  # smart fallbacks
+        keep_separator=True
+    )
+    return splitter.split_text(text)
 
 # ── Ingest PDF endpoint ──
 @app.post("/ingest_pdf")
@@ -106,6 +112,8 @@ async def ingest_pdf(
 
     full_text = extract_pdf_text(temp_path)
     chunks = chunk_text(full_text)
+    for i, ch in enumerate(chunks):
+        print(f"🧩 Chunk {i+1}:\n{ch[:80]}...\n")
     conn = get_db_connection()
     cur = conn.cursor()
     for chunk in chunks:
