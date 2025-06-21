@@ -14,6 +14,8 @@ import requests
 from bs4 import BeautifulSoup
 from fastapi import Query
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+import traceback
+from fastapi import HTTPException
 
 
 # ── Setup upload directory ──
@@ -28,8 +30,13 @@ if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY missing in .env")
 openai.api_key = OPENAI_API_KEY
 
-# Local embedder
-model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+# Text embedding model 
+def get_embedding(text: str) -> list[float]:
+    response = openai.Embedding.create(
+        input=text,
+        model="text-embedding-ada-002" 
+    )
+    return response['data'][0]['embedding']
 
 # ── FastAPI setup ──
 app = FastAPI(title="SmartFusion RAG API")
@@ -37,7 +44,7 @@ app = FastAPI(title="SmartFusion RAG API")
 # ── CORS (allow your React dev server) ──
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,52 +95,79 @@ async def ingest_pdf(
     target_group: str = Form("Unknown"),
     owner: str = Form("Unknown"),
 ):
-    temp_path = os.path.join(UPLOAD_DIR, file.filename)
-    file.file.seek(0)
-    with open(temp_path, "wb") as out:
-        shutil.copyfileobj(file.file, out)
-
-    size = os.path.getsize(temp_path)
-    open_error = None
     try:
-        doc = fitz.open(temp_path)
-        if doc.is_encrypted and not doc.authenticate(""):
-            open_error = "encrypted or password-protected"
-        doc.close()
-    except Exception as e:
-        open_error = str(e)
+        # ── Save upload to disk ──
+        temp_path = os.path.join(UPLOAD_DIR, file.filename)
+        file.file.seek(0)
+        with open(temp_path, "wb") as out:
+            shutil.copyfileobj(file.file, out)
 
-    if open_error:
+        size = os.path.getsize(temp_path)
+
+        # ── Quick open/auth check ──
+        open_error = None
+        try:
+            doc = fitz.open(temp_path)
+            if doc.is_encrypted and not doc.authenticate(""):
+                open_error = "encrypted or password-protected"
+            doc.close()
+        except Exception as e:
+            open_error = str(e)
+
+        if open_error:
+            return {
+                "detail": "🚨 PDF open failed",
+                "written_bytes": size,
+                "open_error": open_error
+            }
+
+        # ── Extract & chunk ──
+        full_text = extract_pdf_text(temp_path)
+        chunks    = chunk_text(full_text)
+        for i, ch in enumerate(chunks):
+            print(f"🧩 Chunk {i+1}:\n{ch[:80]}...\n")
+
+        # ── Connect & insert each chunk ──
+        conn = get_db_connection()
+        cur  = conn.cursor()
+        for chunk in chunks:
+            emb = get_embedding(chunk)
+
+            # ── DEBUG ──
+            print("→ embedding length:", len(emb))
+            print("→ writing to DB:", os.getenv("DB_HOST"), "/", os.getenv("DB_NAME"))
+
+            cur.execute(
+                """
+                INSERT INTO documents
+                  (filename, country, target_group, owner, creation_date, full_text, content_embedding)
+                VALUES (%s,%s,%s,%s,%s,%s,%s)
+                """,
+                (
+                    file.filename,
+                    country,
+                    target_group,
+                    owner,
+                    date.today(),
+                    chunk,
+                    emb
+                )
+            )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
         return {
-            "detail": "🚨 PDF open failed",
-            "written_bytes": size,
-            "open_error": open_error
+            "detail": f"Ingested {len(chunks)} chunks from {file.filename}",
+            "written_bytes": size
         }
 
-    full_text = extract_pdf_text(temp_path)
-    chunks = chunk_text(full_text)
-    for i, ch in enumerate(chunks):
-        print(f"🧩 Chunk {i+1}:\n{ch[:80]}...\n")
-    conn = get_db_connection()
-    cur = conn.cursor()
-    for chunk in chunks:
-        emb = model.encode(chunk).tolist()
-        cur.execute(
-            """
-            INSERT INTO documents
-              (filename, country, target_group, owner, creation_date, full_text, content_embedding)
-            VALUES (%s,%s,%s,%s,%s,%s,%s)
-            """,
-            (file.filename, country, target_group, owner, date.today(), chunk, emb)
-        )
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    return {
-        "detail": f"Ingested {len(chunks)} chunks from {file.filename}",
-        "written_bytes": size
-    }
+    except Exception as e:
+        # Print the full Python traceback so it shows up in your uvicorn console
+        print("❌ ERROR in ingest_pdf:\n", traceback.format_exc())
+        # Return a generic 500 to the client (with CORS header applied)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 # ── Ingest URL endpoint ──
 @app.post("/ingest_url")
@@ -153,8 +187,11 @@ async def ingest_url(
     conn = get_db_connection()
     cur = conn.cursor()
     for i, chunk in enumerate(chunks):
-        emb = model.encode(chunk).tolist()
-        cur.execute(
+        emb = get_embedding(chunk)
+        # ── DEBUG ──
+    print("→ embedding length:", len(emb))
+    print("→ writing to DB:", os.getenv("DB_HOST"), "/", os.getenv("DB_NAME"))
+    cur.execute(
             """
             INSERT INTO documents
               (filename, country, target_group, owner, creation_date, full_text, content_embedding)
@@ -171,7 +208,7 @@ async def ingest_url(
 # ── Retrieval logic ──
 def retrieve(query: str, k: int = 5):
     # 1) Encode the user’s question
-    q_emb = model.encode(query).tolist()
+    q_emb = get_embedding(query)
 
     # 2) Build a global search over all chunks
     sql = """
@@ -234,7 +271,7 @@ def answer_question(req: QueryRequest):
             f"Question: {req.question}\nAnswer:"
         )
         resp = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4-turbo",
             messages=[
                 {"role": "system",  "content": "You are a helpful assistant."},
                 {"role": "user",    "content": prompt},
