@@ -101,7 +101,6 @@ async def ingest_pdf(
         file.file.seek(0)
         with open(temp_path, "wb") as out:
             shutil.copyfileobj(file.file, out)
-
         size = os.path.getsize(temp_path)
 
         # ── Quick open/auth check ──
@@ -113,7 +112,6 @@ async def ingest_pdf(
             doc.close()
         except Exception as e:
             open_error = str(e)
-
         if open_error:
             return {
                 "detail": "🚨 PDF open failed",
@@ -127,12 +125,18 @@ async def ingest_pdf(
         for i, ch in enumerate(chunks):
             print(f"🧩 Chunk {i+1}:\n{ch[:80]}...\n")
 
-        # ── Connect & insert each chunk ──
+        # ── Connect & batch-embed ──
         conn = get_db_connection()
         cur  = conn.cursor()
-        for chunk in chunks:
-            emb = get_embedding(chunk)
 
+        resp = openai.Embedding.create(
+            input=chunks,
+            model="text-embedding-3-small"
+        )
+        embeddings = [d["embedding"] for d in resp["data"]]
+
+        # ── Insert each chunk with its embedding ──
+        for chunk, emb in zip(chunks, embeddings):
             # ── DEBUG ──
             print("→ embedding length:", len(emb))
             print("→ writing to DB:", os.getenv("DB_HOST"), "/", os.getenv("DB_NAME"))
@@ -164,9 +168,7 @@ async def ingest_pdf(
         }
 
     except Exception as e:
-        # Print the full Python traceback so it shows up in your uvicorn console
         print("❌ ERROR in ingest_pdf:\n", traceback.format_exc())
-        # Return a generic 500 to the client (with CORS header applied)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 # ── Ingest URL endpoint ──
