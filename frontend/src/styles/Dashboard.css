@@ -200,6 +200,14 @@ ol.stored-docs-list li {
   font-weight: 500;
 }
 
+.submitted-files-inline {
+  margin-top: 8px;
+  font-size: 14px;
+}
+.submitted-files-inline span {
+  display: inline;
+}
+
 .question-row {
   display: flex;
   flex-direction: column;
@@ -232,7 +240,7 @@ ol.stored-docs-list li {
 }
 
 .answer-box {
-  max-height: 300px;
+  max-height: 250px;
   overflow-y: auto;
   background-color: #f5f5f5;
   border: 1px solid #ccc;

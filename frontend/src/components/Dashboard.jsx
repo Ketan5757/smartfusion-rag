@@ -187,9 +187,13 @@ const Dashboard = () => {
             {submittedFiles.length > 0 && (
               <div className="submitted-output">
                 <strong>Uploaded:</strong>
-                <ul>
-                  {submittedFiles.map((nm,i)=> <li key={i}>{nm}</li>)}
-                </ul>
+                <div className="submitted-files-inline">
+                {submittedFiles.map((name, i) => (
+                <span key={i}>
+                {name}{i < submittedFiles.length - 1 && ', '}
+                </span>
+               ))}
+               </div> 
               </div>
             )}
           </div>
