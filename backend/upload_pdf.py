@@ -14,7 +14,7 @@ print("🔧 DB_USER:", os.getenv("DB_USER"))
 print("🔧 DB_HOST:", os.getenv("DB_HOST"), "DB_PORT:", os.getenv("DB_PORT"))
 
 # --- Initialize Embedding Model ---
-model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+model = SentenceTransformer("text-embedding-3-small")
 
 # --- Database Connection (Secure) ---
 def get_db_connection():
@@ -32,6 +32,7 @@ def get_db_connection():
             host=os.getenv("DB_HOST"),
             port=os.getenv("DB_PORT")
         )
+
         # Debug: verify connected database
         with conn.cursor() as debug_cur:
             debug_cur.execute("SELECT current_database()")
@@ -109,7 +110,7 @@ def insert_into_db(filename, country, target_group, owner, full_text, embedding)
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    pdf_path = "Ketan_Darekar_CV.pdf"  # Update to your PDF file
+    pdf_path = "Ketan_Darekar_CV.pdf"  
     if not os.path.exists(pdf_path):
         print(f"❌ PDF not found at: {os.path.abspath(pdf_path)}")
         exit(1)
@@ -137,6 +138,6 @@ if __name__ == "__main__":
         )
     print("✅ All PDF chunks processed and stored.")
 
-    # Cleanup
+    
     cur.close()
     conn.close()
