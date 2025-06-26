@@ -5,7 +5,7 @@ import psycopg2
 
 # ── Config & Model ──
 load_dotenv()
-model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+model = SentenceTransformer("text-embedding-3-small")
 
 # ── DB Connection ──
 conn = psycopg2.connect(
