@@ -1,5 +1,6 @@
 import os
 import shutil
+import math
 from datetime import date
 from typing import Optional
 from dotenv import load_dotenv
@@ -16,6 +17,8 @@ from fastapi import Query
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import traceback
 from fastapi import HTTPException
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 
 # ── Setup upload directory ──
@@ -254,19 +257,31 @@ def ask_question(req: QueryRequest):
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+    # ── Utility to recursively drop NaN/Inf floats ──
+def sanitize(obj):
+    if isinstance(obj, dict):
+        return {k: sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize(v) for v in obj]
+    if isinstance(obj, float):
+        # replace NaN or Inf with 0.0
+        return obj if math.isfinite(obj) else 0.0
+    return obj
 
 
 # ── Answer endpoint ──
 @app.post("/answer")
 def answer_question(req: QueryRequest):
     try:
-        # 1) fetch top-k chunks globally
+        # 1) fetch top-k chunks
         hits = retrieve(req.question, req.top_k)
 
-        # 2) build the combined context
+        # 2) build context
         context = "\n\n".join(chunk for _, chunk, _ in hits)
 
-        # 3) ask GPT using only that context
+        # 3) query GPT
         prompt = (
             "You are a helpful assistant. Use ONLY the context below to answer.\n\n"
             f"Context:\n{context}\n\n"
@@ -281,13 +296,16 @@ def answer_question(req: QueryRequest):
         )
         answer = resp.choices[0].message.content.strip()
 
-        # 4) return the answer plus which files it came from
+        # 4) build sources (similarity scores may be floats)
         sources = [
-            {"filename": fn, "similarity": round(1.0/(1.0+dist), 3)}
+            {"filename": fn, "similarity": 1.0 / (1.0 + dist)}
             for fn, _, dist in hits
         ]
 
-        return {"answer": answer, "sources": sources}
+        # 5) sanitize and return
+        response_data = {"answer": answer, "sources": sources}
+        safe = sanitize(response_data)
+        return JSONResponse(content=safe)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
