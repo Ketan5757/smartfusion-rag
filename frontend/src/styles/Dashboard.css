@@ -224,6 +224,8 @@ ol.stored-docs-list li {
   align-self: center;
   transform: translateX(-40px); 
 }
+
+
 .upload-box {
   display: flex;
   align-items: center;
@@ -258,4 +260,45 @@ ol.stored-docs-list li {
 .answer-box p {
   margin: 0;
   color: #333;
+}
+
+/* Center the upload + filter rows & constrain their width */
+.dashboard-right .upload-wrapper,
+.dashboard-right .filter-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Make the white box (upload-box) a fixed max width and center it */
+.upload-box {
+  width: 100%;
+  max-width: 600px;        /* tweak as needed */
+  box-sizing: border-box;  /* ensure padding doesn’t overflow */
+}
+
+/* Ensure the inputs inside have room and wrap if necessary */
+.upload-box input,
+.upload-box img {
+  margin: 0 0.25rem;
+}
+
+/* For the filter inputs specifically, make them flex equally */
+.filter-row .upload-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0.5rem; /* match your existing padding */
+}
+
+.filter-input {
+  flex: 1 1 120px;    /* grow and shrink, min-width 120px */
+  margin: 0.25rem;    /* spacing between fields */
+}
+
+/* If you have a fixed height on upload-box, remove it so they resize */
+.upload-box {
+  height: auto !important;
+  padding: 0.75rem 1rem; /* whatever matches your other boxes */
 }

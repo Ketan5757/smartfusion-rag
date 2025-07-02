@@ -19,6 +19,7 @@ import traceback
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from typing import Any
 
 
 # ── Setup upload directory ──
@@ -322,44 +323,70 @@ def search(
     # 1) embed the query
     emb = get_embedding(q)
 
-    # 2) build filters
-    filters, params = [], []
+    # 2) build case‐insensitive filters
+    filters = []
+    params: list[Any] = []
+
     if country:
         filters.append("country ILIKE %s")
-        params.append(country)   # or f"%{country}%" 
+        params.append(f"%{country}%")
     if job_area:
         filters.append("job_area ILIKE %s")
-        params.append(job_area)
+        params.append(f"%{job_area}%")
     if source_type:
         filters.append("source_type ILIKE %s")
-        params.append(source_type)
+        params.append(f"%{source_type}%")
 
-    where_sql = f"WHERE {' AND '.join(filters)}" if filters else ""
+    where_sql = ""
+    if filters:
+        where_sql = "WHERE " + " AND ".join(filters)
 
-    # 3) assemble SQL
+    # 3) full SQL
     sql = f"""
-        SELECT filename, substring(full_text,1,200) AS snippet
+        SELECT filename,
+               substring(full_text, 1, 200) AS snippet
         FROM documents
         {where_sql}
         ORDER BY content_embedding <=> %s::vector
         LIMIT %s
     """
+    # append our vector + limit
     params.extend([emb, k])
 
-    # 4) get a fresh cursor
+    # 4) query
     conn = get_db_connection()
-    cur  = conn.cursor()
-
-    # 5) execute & fetch
+    cur = conn.cursor()
     cur.execute(sql, params)
     rows = cur.fetchall()
-
-    # 6) clean up
     cur.close()
     conn.close()
 
-    # 7) return JSON
-    return JSONResponse(content=[{"filename":fn,"snippet":sn} for fn,sn in rows])
+    # 5) return
+    return JSONResponse(
+      content=[{"filename": fn, "snippet": sn} for fn, sn in rows]
+    )
+
+# ── Metadata endpoint ──
+@app.get("/metadata")
+def list_metadata():
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    # Distinct countries
+    cur.execute("SELECT DISTINCT country FROM documents ORDER BY country;")
+    countries = [row[0] for row in cur.fetchall()]
+    # Distinct job areas
+    cur.execute("SELECT DISTINCT job_area FROM documents ORDER BY job_area;")
+    job_areas = [row[0] for row in cur.fetchall()]
+    # Distinct source types
+    cur.execute("SELECT DISTINCT source_type FROM documents ORDER BY source_type;")
+    source_types = [row[0] for row in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return {
+        "countries": countries,
+        "job_areas": job_areas,
+        "source_types": source_types
+    }
     
     # ── List all stored filenames ──
 @app.get("/documents")
