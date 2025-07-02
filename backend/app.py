@@ -310,6 +310,57 @@ def answer_question(req: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+# ── Search endpoint ──
+@app.get("/search/")
+def search(
+    q: str = Query(..., description="Your query text"),
+    country: Optional[str] = Query(None),
+    job_area: Optional[str] = Query(None),
+    source_type: Optional[str] = Query(None),
+    k: int = Query(5, ge=1, le=50)
+):
+    # 1) embed the query
+    emb = get_embedding(q)
+
+    # 2) build filters
+    filters, params = [], []
+    if country:
+        filters.append("country ILIKE %s")
+        params.append(country)   # or f"%{country}%" 
+    if job_area:
+        filters.append("job_area ILIKE %s")
+        params.append(job_area)
+    if source_type:
+        filters.append("source_type ILIKE %s")
+        params.append(source_type)
+
+    where_sql = f"WHERE {' AND '.join(filters)}" if filters else ""
+
+    # 3) assemble SQL
+    sql = f"""
+        SELECT filename, substring(full_text,1,200) AS snippet
+        FROM documents
+        {where_sql}
+        ORDER BY content_embedding <=> %s::vector
+        LIMIT %s
+    """
+    params.extend([emb, k])
+
+    # 4) get a fresh cursor
+    conn = get_db_connection()
+    cur  = conn.cursor()
+
+    # 5) execute & fetch
+    cur.execute(sql, params)
+    rows = cur.fetchall()
+
+    # 6) clean up
+    cur.close()
+    conn.close()
+
+    # 7) return JSON
+    return JSONResponse(content=[{"filename":fn,"snippet":sn} for fn,sn in rows])
+    
     # ── List all stored filenames ──
 @app.get("/documents")
 def list_documents():
@@ -343,4 +394,4 @@ def delete_document(filename: str = Query(..., description="Filename to delete")
 def on_startup():
     print("🔌 SmartFusion RAG API starting…")
     print(f"✔️  OpenAI key loaded: {'yes' if openai.api_key else 'no'}")
-    print("🚀  Endpoints: POST /ingest_pdf, /ingest_url, /query, /answer")
+    print("🚀  Endpoints: POST /ingest_pdf, /ingest_url, /query, /answer, GET /search, GET /documents, DELETE /documents")
