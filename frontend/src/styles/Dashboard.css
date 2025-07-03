@@ -294,7 +294,14 @@ ol.stored-docs-list li {
 
 .filter-input {
   flex: 1 1 120px;    /* grow and shrink, min-width 120px */
-  margin: 0.25rem;    /* spacing between fields */
+  margin: 0.15rem;    /* spacing between fields */
+}
+
+.filter-label {
+  font-size: 16px;
+  font-weight: 500;
+  color: #000;
+  font-size: 1rem; /* adjust as needed */
 }
 
 /* ————————————— */

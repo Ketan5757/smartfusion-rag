@@ -13,11 +13,11 @@ const Dashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [storedDocs, setStoredDocs] = useState([]);
-  const [metadata, setMetadata] = useState({
-    countries: [],
-    job_areas: [],
-    source_types: []
-  });
+
+  // Static filter options
+  const countryOptions    = ['Germany','India','France','Spain'];
+  const jobAreaOptions    = ['IT','Engineering','Management','Research'];
+  const sourceTypeOptions = ['pdf','docx','html'];
 
   const [countryFilter, setCountryFilter] = useState('');
   const [jobAreaFilter, setJobAreaFilter] = useState('');
@@ -34,34 +34,38 @@ const Dashboard = () => {
   const [queryLoading, setQueryLoading] = useState(false);
 
   useEffect(() => {
+    // load stored docs
     fetch('http://localhost:8000/documents')
       .then(r => r.json())
       .then(list => setStoredDocs(list.reverse()))
       .catch(console.error);
-    fetch('http://localhost:8000/metadata')
-      .then(r => r.json())
-      .then(m => setMetadata(m))
-      .catch(console.error);
   }, []);
 
-  const handleDelete = async (fn) => {
-    if (!window.confirm(`Delete all chunks for "${fn}"?`)) return;
-    await fetch(`http://localhost:8000/documents?filename=${encodeURIComponent(fn)}`, { method: 'DELETE' });
+  const handleDelete = async (filename) => {
+    if (!window.confirm(`Delete all chunks for "${filename}"?`)) return;
+    await fetch(
+      `http://localhost:8000/documents?filename=${encodeURIComponent(filename)}`,
+      { method: 'DELETE' }
+    );
     const docs = await fetch('http://localhost:8000/documents').then(r => r.json());
     setStoredDocs(docs.reverse());
   };
 
   const handleUploadSubmit = async () => {
     if (!files.length) return;
-    setUploading(true); setUploadError('');
+    setUploading(true);
+    setUploadError('');
     try {
       for (let f of files) {
         const form = new FormData();
         form.append('file', f);
-        form.append('country', 'Germany');
+        form.append('country', 'Germany');      // static until you add dynamic later
         form.append('target_group', 'Students');
         form.append('owner', 'Ketan');
-        const res = await fetch('http://localhost:8000/ingest_pdf', { method: 'POST', body: form });
+        const res = await fetch('http://localhost:8000/ingest_pdf', {
+          method: 'POST',
+          body: form
+        });
         const payload = await res.json();
         if (!res.ok) throw new Error(payload.detail || 'Upload failed');
       }
@@ -106,10 +110,13 @@ const Dashboard = () => {
     const q = questionText.trim();
     if (!q) return;
     setLastQuestion(q);
-    setAnswer(''); setError(''); setQueryLoading(true);
+    setAnswer('');
+    setError('');
+    setQueryLoading(true);
     try {
       const res = await fetch('http://localhost:8000/answer', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q, top_k: 5 })
       });
       const payload = await res.json();
@@ -138,14 +145,14 @@ const Dashboard = () => {
                     <button className="delete-button" onClick={()=>handleDelete(fn)}>×</button>
                     {fn}
                   </li>
-                ))}
+                ))
+            }
           </ol>
         </div>
 
         <div className="dashboard-right">
           <center><h1>Chat with PDFs and Webpages</h1></center>
 
-          {/* Upload & Filter Row Side by Side */}
           <div className="top-row">
             {/* Upload Section */}
             <div className="upload-wrapper">
@@ -189,47 +196,44 @@ const Dashboard = () => {
               )}
             </div>
 
-            {/* Filter Section with embedded results */}
+            {/* Filter Section */}
             <div className="filter-wrapper">
               <label className="filter-label">Filter Documents</label>
               <div className="upload-box">
-                <input
-                  list="countries"
-                  placeholder="Country"
+                <select
                   value={countryFilter}
                   onChange={e=>setCountryFilter(e.target.value)}
                   className="filter-input"
-                />
-                <datalist id="countries">
-                  {metadata.countries.map(c=> <option key={c} value={c}/>)}
-                </datalist>
+                >
+                  <option value="">Country</option>
+                  {countryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
 
-                <input
-                  list="jobAreas"
-                  placeholder="Job area"
+                <select
                   value={jobAreaFilter}
                   onChange={e=>setJobAreaFilter(e.target.value)}
                   className="filter-input"
-                />
-                <datalist id="jobAreas">
-                  {metadata.job_areas.map(j=> <option key={j} value={j}/>)}
-                </datalist>
+                >
+                  <option value="">Job Area</option>
+                  {jobAreaOptions.map(j => <option key={j} value={j}>{j}</option>)}
+                </select>
 
-                <input
-                  list="sourceTypes"
-                  placeholder="Source type"
+                <select
                   value={sourceTypeFilter}
                   onChange={e=>setSourceTypeFilter(e.target.value)}
                   className="filter-input"
-                />
-                <datalist id="sourceTypes">
-                  {metadata.source_types.map(s=> <option key={s} value={s}/>)}
-                </datalist>
+                >
+                  <option value="">Source Type</option>
+                  {sourceTypeOptions.map(s => (
+                    <option key={s} value={s}>{s.toUpperCase()}</option>
+                  ))}
+                </select>
 
                 <input
                   type="number"
                   placeholder="k"
-                  min={1} max={50}
+                  min={1}
+                  max={50}
                   value={kFilter}
                   onChange={e=>setKFilter(e.target.value)}
                   className="filter-input"
@@ -243,7 +247,7 @@ const Dashboard = () => {
                 />
               </div>
 
-              {/* Search feedback & results nested under filter */}
+              {/* Search Results */}
               <div className="search-results-container">
                 {searchLoading && <div className="loading-indicator">⏳ Searching…</div>}
                 {searchError   && <div className="error-text">❌ {searchError}</div>}
@@ -271,26 +275,16 @@ const Dashboard = () => {
                 placeholder="Ask your question here"
                 value={questionText}
                 onChange={e=>setQuestionText(e.target.value)}
-                onKeyDown={e=>e.key==='Enter' && handleAskQuestion()}
+                onKeyDown={e=>e.key==='Enter'&&handleAskQuestion()}
                 disabled={queryLoading}
               />
-              <img
-                src={micIcon}
-                className="upload-icon"
-                alt="Mic"
-                onClick={handleMicInput}
-              />
-              <img
-                src={sendIcon}
-                className="upload-icon"
-                alt="Send"
-                onClick={handleAskQuestion}
-              />
+              <img src={micIcon} className="upload-icon" alt="Mic" onClick={handleMicInput}/>
+              <img src={sendIcon} className="upload-icon" alt="Send" onClick={handleAskQuestion}/>
             </div>
             {lastQuestion && <div className="last-question">{lastQuestion}</div>}
             {queryLoading  && <div className="loading-indicator">⏳ Thinking…</div>}
-            {answer && <div className="answer-box"><p>✅ {answer}</p></div>}
-            {error && <div className="error-text">❌ {error}</div>}
+            {answer        && <div className="answer-box"><p>✅ {answer}</p></div>}
+            {error         && <div className="error-text">❌ {error}</div>}
           </div>
         </div>
       </div>
