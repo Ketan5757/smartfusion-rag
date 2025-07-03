@@ -7,54 +7,43 @@ import micIcon    from '../assets/mic.png';
 import { useState, useEffect } from 'react';
 
 const Dashboard = () => {
-  // ── Upload & state ──
-  const [inputText, setInputText]           = useState('');
-  const [files, setFiles]                   = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [files, setFiles] = useState([]);
   const [submittedFiles, setSubmittedFiles] = useState([]);
-  const [uploading, setUploading]           = useState(false);
-  const [uploadError, setUploadError]       = useState('');
-
-  // ── Stored docs (left pane) ──
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const [storedDocs, setStoredDocs] = useState([]);
-
-  // ── Metadata for filter dropdowns ──
   const [metadata, setMetadata] = useState({
     countries: [],
     job_areas: [],
     source_types: []
   });
 
-  // ── Search filters & results ──
-  const [countryFilter, setCountryFilter]       = useState('');
-  const [jobAreaFilter, setJobAreaFilter]       = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
+  const [jobAreaFilter, setJobAreaFilter] = useState('');
   const [sourceTypeFilter, setSourceTypeFilter] = useState('');
-  const [kFilter, setKFilter]                   = useState(5);
-  const [results, setResults]                   = useState([]);
-  const [searchLoading, setSearchLoading]       = useState(false);
-  const [searchError, setSearchError]           = useState('');
+  const [kFilter, setKFilter] = useState(5);
+  const [results, setResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
-  // ── Ask question state ──
-  const [questionText, setQuestionText]     = useState('');
-  const [lastQuestion, setLastQuestion]     = useState('');
-  const [answer, setAnswer]                 = useState('');
-  const [error, setError]                   = useState('');
-  const [queryLoading, setQueryLoading]     = useState(false);
+  const [questionText, setQuestionText] = useState('');
+  const [lastQuestion, setLastQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [error, setError] = useState('');
+  const [queryLoading, setQueryLoading] = useState(false);
 
-  // Fetch stored docs and metadata on mount
   useEffect(() => {
-    // load documents
     fetch('http://localhost:8000/documents')
       .then(r => r.json())
       .then(list => setStoredDocs(list.reverse()))
       .catch(console.error);
-    // load metadata
     fetch('http://localhost:8000/metadata')
       .then(r => r.json())
       .then(m => setMetadata(m))
       .catch(console.error);
   }, []);
 
-  // Delete document by filename
   const handleDelete = async (fn) => {
     if (!window.confirm(`Delete all chunks for "${fn}"?`)) return;
     await fetch(`http://localhost:8000/documents?filename=${encodeURIComponent(fn)}`, { method: 'DELETE' });
@@ -62,7 +51,6 @@ const Dashboard = () => {
     setStoredDocs(docs.reverse());
   };
 
-  // Upload PDF(s)
   const handleUploadSubmit = async () => {
     if (!files.length) return;
     setUploading(true); setUploadError('');
@@ -90,7 +78,6 @@ const Dashboard = () => {
     }
   };
 
-  // Trigger filtered search
   const handleSearch = async () => {
     const query = questionText.trim() || lastQuestion;
     if (!query) return;
@@ -115,7 +102,6 @@ const Dashboard = () => {
     }
   };
 
-  // Ask question (original)
   const handleAskQuestion = async () => {
     const q = questionText.trim();
     if (!q) return;
@@ -136,14 +122,12 @@ const Dashboard = () => {
     }
   };
 
-  // STT placeholder
   const handleMicInput = () => console.log('Mic clicked');
 
   return (
     <>
       <Header />
       <div className="dashboard-wrapper">
-        {/* LEFT PANEL */}
         <div className="dashboard-left">
           <h3>Stored links &amp; docs</h3>
           <ol className="stored-docs-list">
@@ -158,107 +142,150 @@ const Dashboard = () => {
           </ol>
         </div>
 
-        {/* RIGHT PANEL */}
         <div className="dashboard-right">
           <center><h1>Chat with PDFs and Webpages</h1></center>
 
-          {/* Upload Section */}
-          <div className="upload-wrapper">
-            <label className="upload-label">Upload your pdf or enter link</label>
-            <div className="upload-box">
-              <input type="text" placeholder="Enter the website link here"
-                value={inputText} disabled={uploading}
-                onChange={e=>setInputText(e.target.value)} />
-              <input type="file" id="file-upload" accept=".pdf,.docx" multiple style={{display:'none'}} 
-                onChange={e=>{
-                  const pick=Array.from(e.target.files).slice(0,5);
-                  setFiles(pick);
-                  setInputText(pick.map(f=>f.name).join(', '));
-                }} disabled={uploading}/>
-              <label htmlFor="file-upload"><img src={uploadIcon} alt="Upload" className="upload-icon"/></label>
-              <img src={sendIcon} alt="Submit" className="upload-icon" onClick={handleUploadSubmit}/>
-            </div>
-            {uploadError && <div className="error-text">❌ {uploadError}</div>}
-            {submittedFiles.length>0 && (
-              <div className="submitted-output">
-                <strong>Uploaded:</strong> {submittedFiles.join(', ')}
+          {/* Upload & Filter Row Side by Side */}
+          <div className="top-row">
+            {/* Upload Section */}
+            <div className="upload-wrapper">
+              <label className="upload-label">Upload your pdf or enter link</label>
+              <div className="upload-box">
+                <input
+                  type="text"
+                  placeholder="Enter the website link here"
+                  value={inputText}
+                  disabled={uploading}
+                  onChange={e=>setInputText(e.target.value)}
+                />
+                <input
+                  type="file"
+                  id="file-upload"
+                  accept=".pdf,.docx"
+                  multiple
+                  style={{display:'none'}}
+                  onChange={e=>{
+                    const pick = Array.from(e.target.files).slice(0,5);
+                    setFiles(pick);
+                    setInputText(pick.map(f=>f.name).join(', '));
+                  }}
+                  disabled={uploading}
+                />
+                <label htmlFor="file-upload">
+                  <img src={uploadIcon} alt="Upload" className="upload-icon"/>
+                </label>
+                <img
+                  src={sendIcon}
+                  alt="Submit"
+                  className="upload-icon"
+                  onClick={handleUploadSubmit}
+                />
               </div>
-            )}
+              {uploadError && <div className="error-text">❌ {uploadError}</div>}
+              {submittedFiles.length>0 && (
+                <div className="submitted-output">
+                  <strong>Uploaded:</strong> {submittedFiles.join(', ')}
+                </div>
+              )}
+            </div>
+
+            {/* Filter Section with embedded results */}
+            <div className="filter-wrapper">
+              <label className="filter-label">Filter Documents</label>
+              <div className="upload-box">
+                <input
+                  list="countries"
+                  placeholder="Country"
+                  value={countryFilter}
+                  onChange={e=>setCountryFilter(e.target.value)}
+                  className="filter-input"
+                />
+                <datalist id="countries">
+                  {metadata.countries.map(c=> <option key={c} value={c}/>)}
+                </datalist>
+
+                <input
+                  list="jobAreas"
+                  placeholder="Job area"
+                  value={jobAreaFilter}
+                  onChange={e=>setJobAreaFilter(e.target.value)}
+                  className="filter-input"
+                />
+                <datalist id="jobAreas">
+                  {metadata.job_areas.map(j=> <option key={j} value={j}/>)}
+                </datalist>
+
+                <input
+                  list="sourceTypes"
+                  placeholder="Source type"
+                  value={sourceTypeFilter}
+                  onChange={e=>setSourceTypeFilter(e.target.value)}
+                  className="filter-input"
+                />
+                <datalist id="sourceTypes">
+                  {metadata.source_types.map(s=> <option key={s} value={s}/>)}
+                </datalist>
+
+                <input
+                  type="number"
+                  placeholder="k"
+                  min={1} max={50}
+                  value={kFilter}
+                  onChange={e=>setKFilter(e.target.value)}
+                  className="filter-input"
+                />
+
+                <img
+                  src={sendIcon}
+                  alt="Filter"
+                  className="upload-icon"
+                  onClick={handleSearch}
+                />
+              </div>
+
+              {/* Search feedback & results nested under filter */}
+              <div className="search-results-container">
+                {searchLoading && <div className="loading-indicator">⏳ Searching…</div>}
+                {searchError   && <div className="error-text">❌ {searchError}</div>}
+                <div className="results-list">
+                  {results.length === 0
+                    ? <p className="placeholder">No results to display.</p>
+                    : results.map((r,i)=>(
+                        <div key={i} className="result-item">
+                          <strong>{r.filename}</strong>
+                          <p className="snippet">{r.snippet}</p>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Search Filters Section */}
-          <div className="filter-row">
-            <label className="filter-label">Filter Documents</label>
-            <div className="upload-box">
-              <input
-                list="countries"
-                placeholder="Country"
-                value={countryFilter}
-                onChange={e=>setCountryFilter(e.target.value)}
-                className="filter-input"
-              />
-              <datalist id="countries">
-                {metadata.countries.map(c=> <option key={c} value={c}/>) }
-              </datalist>
-
-              <input
-                list="jobAreas"
-                placeholder="Job area"
-                value={jobAreaFilter}
-                onChange={e=>setJobAreaFilter(e.target.value)}
-                className="filter-input"
-              />
-              <datalist id="jobAreas">
-                {metadata.job_areas.map(j=> <option key={j} value={j}/>) }
-              </datalist>
-
-              <input
-                list="sourceTypes"
-                placeholder="Source type"
-                value={sourceTypeFilter}
-                onChange={e=>setSourceTypeFilter(e.target.value)}
-                className="filter-input"
-              />
-              <datalist id="sourceTypes">
-                {metadata.source_types.map(s=> <option key={s} value={s}/>) }
-              </datalist>
-
-              <input
-                type="number"
-                placeholder="k"
-                min={1} max={50}
-                value={kFilter}
-                onChange={e=>setKFilter(e.target.value)}
-                className="filter-input w-16"
-              />
-              <img src={sendIcon} alt="Filter" className="upload-icon" onClick={handleSearch}/>
-            </div>
-            {searchLoading && <div className="loading-indicator">⏳ Searching…</div>}
-            {searchError   && <div className="error-text">❌ {searchError}</div>}
-
-            {/* Results */}
-            <div className="results-list">
-              {results.length===0
-                ? <p className="placeholder">No results to display.</p>
-                : results.map((r,i)=>(
-                    <div key={i} className="result-item">
-                      <strong>{r.filename}</strong>
-                      <p className="snippet">{r.snippet}</p>
-                    </div>
-                  ))}
-            </div>
-          </div>
-
-          {/* Question Section */}
+          {/* Ask Question Section */}
           <div className="question-row">
             <label className="question-label">Ask Questions about</label>
             <div className="upload-box">
-              <input type="text" placeholder="Ask your question here"
-                value={questionText} onChange={e=>setQuestionText(e.target.value)}
-                onKeyDown={e=>e.key==='Enter'&&handleAskQuestion()}
-                disabled={queryLoading}/>
-              <img src={micIcon} className="upload-icon" alt="Mic" onClick={handleMicInput}/>
-              <img src={sendIcon} className="upload-icon" alt="Send" onClick={handleAskQuestion}/>
+              <input
+                type="text"
+                placeholder="Ask your question here"
+                value={questionText}
+                onChange={e=>setQuestionText(e.target.value)}
+                onKeyDown={e=>e.key==='Enter' && handleAskQuestion()}
+                disabled={queryLoading}
+              />
+              <img
+                src={micIcon}
+                className="upload-icon"
+                alt="Mic"
+                onClick={handleMicInput}
+              />
+              <img
+                src={sendIcon}
+                className="upload-icon"
+                alt="Send"
+                onClick={handleAskQuestion}
+              />
             </div>
             {lastQuestion && <div className="last-question">{lastQuestion}</div>}
             {queryLoading  && <div className="loading-indicator">⏳ Thinking…</div>}
@@ -267,7 +294,6 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
       <Footer />
     </>
   );

@@ -297,8 +297,84 @@ ol.stored-docs-list li {
   margin: 0.25rem;    /* spacing between fields */
 }
 
-/* If you have a fixed height on upload-box, remove it so they resize */
-.upload-box {
-  height: auto !important;
-  padding: 0.75rem 1rem; /* whatever matches your other boxes */
+/* ————————————— */
+/* Top row: two equal halves */
+/* ————————————— */
+.top-row {
+  display: flex;
+  justify-content: space-between; /* spread them out */
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: nowrap;
 }
+
+/* ————————————— */
+/* Each wrapper: take ~48% */
+/* ————————————— */
+.upload-wrapper,
+.filter-wrapper {
+  flex: 0 0 48%;    /* each box is roughly half of that row */
+  min-width: 280px; /* won’t go too small on narrow screens */
+}
+
+/* ————————————— */
+/* Make inner boxes fit their wrapper */
+/* ————————————— */
+.upload-wrapper .upload-box,
+.filter-wrapper .upload-box {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ————————————— */
+/* Text inputs fill remaining space */
+/* ————————————— */
+.upload-wrapper input[type="text"],
+.filter-wrapper .filter-input,
+.filter-wrapper input[type="number"] {
+  flex: 1 1 auto;    /* take up all leftover space */
+  min-width: 80px;   /* but never smaller than this */
+  height: 38px;
+  padding: 0 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+/* ————————————— */
+/* Icon buttons stay fixed size */
+/* ————————————— */
+.upload-wrapper .upload-icon,
+.filter-wrapper .upload-icon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+
+/* Reduce card padding */
+.upload-wrapper .upload-box,
+.filter-wrapper .upload-box {
+  padding: 0.3rem 0.65rem;   /* was 0.75rem 1rem */
+}
+
+/* Reduce input height */
+.upload-wrapper input[type="text"],
+.filter-wrapper .filter-input,
+.filter-wrapper input[type="number"] {
+  height: 28px;             /* was 38px */
+  padding: 0 0.5rem;        /* slightly less padding inside */
+}
+
