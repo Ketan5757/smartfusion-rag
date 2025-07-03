@@ -378,3 +378,9 @@ ol.stored-docs-list li {
   padding: 0 0.5rem;        /* slightly less padding inside */
 }
 
+.top-row .upload-wrapper .upload-icon,
+.top-row .filter-wrapper .upload-icon,
+.question-row .upload-icon {
+  width: 24px;    /* tweak as needed */
+  height: 24px;   /* same as above */
+}
