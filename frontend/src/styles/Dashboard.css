@@ -212,7 +212,7 @@ ol.stored-docs-list li {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 20px;      
+  margin-top: -0.5rem;      
   gap: 6px;
   width: 100%;
   position: relative;
