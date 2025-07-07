@@ -94,10 +94,12 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 100) -> list[str
 # ── Ingest PDF endpoint ──
 @app.post("/ingest_pdf")
 async def ingest_pdf(
-    file: UploadFile = File(...),
-    country: str = Form("Unknown"),
-    target_group: str = Form("Unknown"),
-    owner: str = Form("Unknown"),
+    file:        UploadFile = File(...),
+    country:     str        = Form("Unknown"),
+    job_area:    str        = Form("Unknown"),
+    source_type: str        = Form("Unknown"),
+    target_group:str        = Form("Unknown"),
+    owner:       str        = Form("Unknown"),
 ):
     try:
         # ── Save upload to disk ──
@@ -139,21 +141,26 @@ async def ingest_pdf(
         )
         embeddings = [d["embedding"] for d in resp["data"]]
 
-        # ── Insert each chunk with its embedding ──
+        # ── Insert each chunk with its embedding and metadata ──
         for chunk, emb in zip(chunks, embeddings):
-            # ── DEBUG ──
             print("→ embedding length:", len(emb))
             print("→ writing to DB:", os.getenv("DB_HOST"), "/", os.getenv("DB_NAME"))
 
             cur.execute(
                 """
                 INSERT INTO documents
-                  (filename, country, target_group, owner, creation_date, full_text, content_embedding)
-                VALUES (%s,%s,%s,%s,%s,%s,%s)
+                  (filename, country, job_area, source_type,
+                   target_group, owner, creation_date,
+                   full_text, content_embedding)
+                VALUES (%s,      %s,      %s,       %s,
+                        %s,          %s,    %s,
+                        %s,          %s)
                 """,
                 (
                     file.filename,
                     country,
+                    job_area,
+                    source_type,
                     target_group,
                     owner,
                     date.today(),
@@ -174,6 +181,7 @@ async def ingest_pdf(
     except Exception as e:
         print("❌ ERROR in ingest_pdf:\n", traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 # ── Ingest URL endpoint ──
 @app.post("/ingest_url")
@@ -212,39 +220,56 @@ async def ingest_url(
     return {"detail": f"Ingested {len(chunks)} chunks from {url}"}
 
 # ── Retrieval logic ──
-def retrieve(query: str, k: int = 5):
-    # 1) Encode the user’s question
+def retrieve(
+    query: str,
+    k: int,
+    country: Optional[str] = None,
+    job_area: Optional[str] = None,
+    source_type: Optional[str] = None
+):
     q_emb = get_embedding(query)
 
-    # 2) Build a global search over all chunks
-    sql = """
+    filters = []
+    params = []
+    if country:
+        filters.append("country ILIKE %s");      params.append(f"%{country}%")
+    if job_area:
+        filters.append("job_area ILIKE %s");     params.append(f"%{job_area}%")
+    if source_type:
+        filters.append("source_type ILIKE %s");  params.append(f"%{source_type}%")
+
+    where_sql = ""
+    if filters:
+        where_sql = "WHERE " + " AND ".join(filters)
+
+    sql = f"""
       SELECT filename,
              full_text,
              content_embedding <=> (%s)::vector AS distance
         FROM documents
+       {where_sql}
        ORDER BY distance ASC
        LIMIT %s
     """
-    params = [q_emb, k]
 
-    # (optional) debug print
-    print("🔍 SQL:", sql.replace("\n", " "))
-    print("🔢 params:", params)
+    # embed param first, then any filter params, then k
+    db_params = [q_emb] + params + [k]
 
     conn = get_db_connection()
     cur  = conn.cursor()
-    cur.execute(sql, params)
+    cur.execute(sql, db_params)
     rows = cur.fetchall()
-    print(f"✅ Retrieved {len(rows)} chunks across all PDFs")
     cur.close()
     conn.close()
     return rows
 
 # ── Request schema ──
 class QueryRequest(BaseModel):
-    question: str
-    top_k:    int              = 5
-    filename: Optional[str]    = None
+    question:     str
+    top_k:        int
+    country:      Optional[str] = None
+    job_area:     Optional[str] = None
+    source_type:  Optional[str] = None
 
 # ── Query endpoint ──
 @app.post("/query")
@@ -276,8 +301,14 @@ def sanitize(obj):
 @app.post("/answer")
 def answer_question(req: QueryRequest):
     try:
-        # 1) fetch top-k chunks
-        hits = retrieve(req.question, req.top_k)
+        # 1) fetch top-k chunks, now with metadata filters
+        hits = retrieve(
+            query      = req.question,
+            k          = req.top_k,
+            country    = req.country,
+            job_area   = req.job_area,
+            source_type= req.source_type
+        )
 
         # 2) build context
         context = "\n\n".join(chunk for _, chunk, _ in hits)
@@ -291,13 +322,13 @@ def answer_question(req: QueryRequest):
         resp = openai.ChatCompletion.create(
             model="gpt-4-turbo",
             messages=[
-                {"role": "system",  "content": "You are a helpful assistant."},
-                {"role": "user",    "content": prompt},
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user",   "content": prompt},
             ],
         )
         answer = resp.choices[0].message.content.strip()
 
-        # 4) build sources (similarity scores may be floats)
+        # 4) build sources
         sources = [
             {"filename": fn, "similarity": 1.0 / (1.0 + dist)}
             for fn, _, dist in hits
@@ -310,6 +341,7 @@ def answer_question(req: QueryRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
     
 # ── Search endpoint ──
 @app.get("/search/")
