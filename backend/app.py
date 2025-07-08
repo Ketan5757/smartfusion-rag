@@ -211,7 +211,7 @@ async def ingest_url(
     for i, chunk in enumerate(chunks):
         emb = get_embedding(chunk)
         host = urlparse(url).netloc.replace(".", "_")
-        fn   = f"{host}_chunk{i+1}"
+        fn   = host
         cur.execute(
             """
             INSERT INTO documents
