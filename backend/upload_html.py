@@ -44,11 +44,29 @@ def insert_into_db(filename, country, target_group, owner, full_text, embedding)
     cur.execute(
         """
         INSERT INTO documents
-        (filename, country, target_group, owner, creation_date, full_text, content_embedding)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        (filename,
+        country,
+        job_area,
+        source_type,
+        target_group,
+        owner,
+        creation_date,
+        full_text,
+        content_embedding)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
-        (filename, country, target_group, owner, date.today(), full_text, embedding)
-    )
+        ( filename,
+         country,
+         "Unknown",   # or pull from args
+         "HTML",
+         target_group,
+         owner,
+         date.today(),
+         full_text,
+         embedding
+         )
+         )
+    conn.commit()
     conn.commit()
 
 # --- Main HTML ingestion ---

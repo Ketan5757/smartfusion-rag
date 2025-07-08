@@ -20,7 +20,7 @@ from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from typing import Any
-
+from urllib.parse import urlparse
 
 # ── Setup upload directory ──
 BASE_DIR = os.path.dirname(__file__)
@@ -186,32 +186,45 @@ async def ingest_pdf(
 # ── Ingest URL endpoint ──
 @app.post("/ingest_url")
 async def ingest_url(
-    url: str = Query(..., description="Webpage URL to ingest"),
-    country: str = Query("Unknown"),
-    target_group: str = Query("Unknown"),
-    owner: str = Query("Unknown")
+    url:         str = Query(..., description="Webpage URL to ingest"),
+    country:     str = Query("Unknown"),
+    job_area:    str = Query("Unknown"),
+    source_type: str = Query("HTML"),
+    target_group:str = Query("Unknown"),
+    owner:       str = Query("Unknown"),
 ):
+    # 1) fetch page
     resp = requests.get(url)
     if resp.status_code != 200:
         raise HTTPException(status_code=400, detail=f"Failed to fetch {url}: {resp.status_code}")
-    soup = BeautifulSoup(resp.text, "html.parser")
-    full_text = " ".join(soup.stripped_strings)
-    chunks = chunk_text(full_text)
 
+    # 2) parse HTML → raw text
+    soup      = BeautifulSoup(resp.text, "html.parser")
+    full_text = " ".join(soup.stripped_strings)    # ← define full_text here!
+
+    # 3) split into chunks
+    chunks = chunk_text(full_text)                 # ← now chunks exists
+
+    # 4) embed & store
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur  = conn.cursor()
     for i, chunk in enumerate(chunks):
         emb = get_embedding(chunk)
-        # ── DEBUG ──
-    print("→ embedding length:", len(emb))
-    print("→ writing to DB:", os.getenv("DB_HOST"), "/", os.getenv("DB_NAME"))
-    cur.execute(
+        host = urlparse(url).netloc.replace(".", "_")
+        fn   = f"{host}_chunk{i+1}"
+        cur.execute(
             """
             INSERT INTO documents
-              (filename, country, target_group, owner, creation_date, full_text, content_embedding)
-            VALUES (%s,%s,%s,%s,%s,%s,%s)
+              (filename, country, job_area, source_type,
+               target_group, owner, creation_date,
+               full_text, content_embedding)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (f"{url}_chunk{i}", country, target_group, owner, date.today(), chunk, emb)
+            (
+              fn, country, job_area, source_type,
+              target_group, owner, date.today(),
+              chunk, emb
+            )
         )
     conn.commit()
     cur.close()
