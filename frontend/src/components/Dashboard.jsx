@@ -131,6 +131,12 @@ const Dashboard = () => {
     setSearchError('');
     setResults([]);
     try {
+      // if no filters, just load all filenames
+      if (!countryFilter && !jobAreaFilter && !sourceTypeFilter) {
+        const docs = await fetch('http://localhost:8000/documents').then(r => r.json());
+        // normalize to the same shape your UI expects
+        setResults(docs.map(fn => ({ filename: fn, snippet: '' })));
+      } else {
       const params = new URLSearchParams({ q: '', k: 5 });
       if (countryFilter) params.append('country', countryFilter);
       if (jobAreaFilter) params.append('job_area', jobAreaFilter);
@@ -138,6 +144,7 @@ const Dashboard = () => {
       const res = await fetch(`http://localhost:8000/search/?${params.toString()}`);
       if (!res.ok) throw new Error(`Status ${res.status}`);
       setResults(await res.json());
+      }
     } catch (e) {
       setSearchError(e.message);
     } finally {

@@ -288,8 +288,15 @@ class QueryRequest(BaseModel):
 @app.post("/query")
 def ask_question(req: QueryRequest):
     try:
-        # retrieve across all PDFs
-        hits = retrieve(req.question, req.top_k)
+        # if req.country/job_area/source_type are None ⇒ retrieves ALL;
+        # otherwise only those matching the metadata
+        hits = retrieve(
+            query       = req.question,
+            k           = req.top_k,
+            country     = req.country,
+            job_area    = req.job_area,
+            source_type = req.source_type
+        )
         return [
             {"filename": fn, "snippet": snip}
             for fn, snip, _ in hits
