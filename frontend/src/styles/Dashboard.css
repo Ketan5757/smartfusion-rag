@@ -388,17 +388,16 @@ ol.stored-docs-list li {
 .top-row .upload-wrapper .upload-icon,
 .top-row .filter-wrapper .upload-icon,
 .question-row .upload-icon {
-  width: 24px;    /* tweak as needed */
-  height: 24px;   /* same as above */
+  width: 24px;    
+  height: 24px;   
 }
 
 .chat-container {
-  /* make it span most of the available width */
+
   width: 100%;
-  /* and optionally reduce left/right padding inside the parent */
   padding: 1rem;
-  max-width: 900px;       /* or whatever max you prefer */
-  margin: 1.5rem auto;    /* centers it horizontally and adds top/bottom space */
+  max-width: 900px;       
+  margin: 1.5rem auto;    
   
   /* keep your existing styling */
   border: 1px solid #ccc;
