@@ -41,8 +41,9 @@ const Dashboard = () => {
 
   // Q&A pane
   const [questionText, setQuestionText]          = useState('');
-  const [lastQuestion, setLastQuestion]          = useState('');
-  const [answer, setAnswer]                      = useState('');
+  //const [lastQuestion, setLastQuestion]          = useState('');
+  //const [answer, setAnswer]                      = useState('');
+  const [chatHistory, setChatHistory] = useState([]);
   const [error, setError]                        = useState('');
   const [queryLoading, setQueryLoading]          = useState(false);
 
@@ -160,8 +161,8 @@ const Dashboard = () => {
   const handleAskQuestion = async () => {
     const q = questionText.trim();
     if (!q) return;
-    setLastQuestion(q);
-    setAnswer('');
+    //setLastQuestion(q);
+    //setAnswer('');
     setError('');
     setQueryLoading(true);
     try {
@@ -179,7 +180,11 @@ const Dashboard = () => {
       });
       const p = await res.json();
       if (!res.ok) throw new Error(p.detail || 'Error');
-      setAnswer(p.answer);
+      setChatHistory(h => [
+        ...h,
+        { role: 'user',      content: q },
+        { role: 'assistant', content: p.answer }
+      ]);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -333,29 +338,61 @@ const Dashboard = () => {
           </div>
 
           {/* Q&A */}
-          <div className="question-row">
-            <label className="question-label">Ask Questions about</label>
-            <div className="upload-box" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <input
-                type="text"
-                placeholder="Ask your question here"
-                value={questionText}
-                onChange={e => setQuestionText(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAskQuestion()}
-                disabled={queryLoading}
-                style={{ flexGrow: 1 }}
-              />
-              <img src={micIcon} className="upload-icon" alt="Mic" onClick={handleAskQuestion}/>
-              <img src={sendIcon} className="upload-icon" alt="Send" onClick={handleAskQuestion}/>
-            </div>
-            {lastQuestion && <div className="last-question">{lastQuestion}</div>}
-            {queryLoading && <div className="loading-indicator">⏳ Thinking…</div>}
-            {answer && <div className="answer-box"><p>✅ {answer}</p></div>}
-            {error && <div className="error-text">❌ {error}</div>}
-          </div>
+<div className="question-row">
+  <label className="question-label">Ask Questions about</label>
+  <div
+    className="upload-box"
+    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+  >
+    <input
+      type="text"
+      placeholder="Ask your question here"
+      value={questionText}
+      onChange={e => setQuestionText(e.target.value)}
+      onKeyDown={e => e.key === 'Enter' && handleAskQuestion()}
+      disabled={queryLoading}
+      style={{ flexGrow: 1 }}
+    />
+    <img
+      src={micIcon}
+      className="upload-icon"
+      alt="Mic"
+      onClick={handleAskQuestion}
+    />
+    <img
+      src={sendIcon}
+      className="upload-icon"
+      alt="Send"
+      onClick={handleAskQuestion}
+    />
+  </div>
+
+  {/* Scrollable chat history */}
+  <div className="chat-container">
+  {chatHistory.length === 0 ? (
+    <p className="placeholder">No messages yet.</p>
+  ) : (
+    chatHistory.map((msg, i) =>
+      msg.role === 'user' ? (
+        <div key={i} className="chat-user">
+          <span className="chat-user-icon">👤 ⇒ </span>
+          <span className="chat-user-text">{msg.content}</span>
         </div>
-      </div>
-      <Footer />
+      ) : (
+        <div key={i} className="chat-assistant">
+          <span className="chat-assistant-icon">🤖 ⇒ </span>
+          <span className="chat-assistant-text">{msg.content}</span>
+        </div>
+      )
+    )
+  )}
+</div>
+
+  {error && <div className="error-text">❌ {error}</div>}
+  </div>
+  </div>
+  </div>
+  <Footer />
     </>
   );
 };

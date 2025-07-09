@@ -391,3 +391,67 @@ ol.stored-docs-list li {
   width: 24px;    /* tweak as needed */
   height: 24px;   /* same as above */
 }
+
+.chat-container {
+  /* make it span most of the available width */
+  width: 100%;
+  /* and optionally reduce left/right padding inside the parent */
+  padding: 1rem;
+  max-width: 900px;       /* or whatever max you prefer */
+  margin: 1.5rem auto;    /* centers it horizontally and adds top/bottom space */
+  
+  /* keep your existing styling */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  height: 270px;
+  overflow-y: auto;
+}
+
+.chat-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: #e8f0fe;
+  margin: 0.5rem 0;
+}
+
+.chat-user-icon {
+  /* pick one of these colors (see suggestions below) */
+  color: #1E90FF;    /* DodgerBlue */
+  /* color: #2ECC71;  /* Emerald Green */
+  /* color: #6C757D;  /* Muted Gray */
+  font-size: 1.2em;  /* slightly larger than text */
+}
+
+.chat-user-text {
+  font-weight: 400;  /* normal weight, not too bold */
+  color: #333;       /* dark gray, not full black */
+}
+
+.chat-assistant {
+  text-align: left;
+  margin: 0.5rem 0;
+  background: #f7f7f7;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.placeholder {
+  color: #888;
+  text-align: center;
+}
+
+.chat-user-label {
+  font-weight: 700;           /* bold */
+  color: #222;                /* dark grey */
+  margin-right: 0.5rem;
+}
+
+.chat-user-content {
+  font-weight: 500;           /* normal-to-medium text */
+  color: #444;                /* medium grey for the message */
+}
