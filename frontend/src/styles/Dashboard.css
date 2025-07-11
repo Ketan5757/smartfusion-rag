@@ -222,7 +222,7 @@ ol.stored-docs-list li {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 20px;      
+  margin-top: -40px;
   gap: 6px;
   width: 100%;
   position: relative;
@@ -234,7 +234,6 @@ ol.stored-docs-list li {
   align-self: center;
   transform: translateX(-40px); 
 }
-
 
 .upload-box {
   display: flex;
@@ -407,14 +406,14 @@ ol.stored-docs-list li {
   width: 100%;
   padding: 1rem;
   max-width: 900px;       
-  margin: 1.5rem auto;    
+  margin-top: 5px;    
   
   /* keep your existing styling */
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 1rem;
   background: #fff;
-  height: 270px;
+  height: 260px;
   overflow-y: auto;
 }
 
