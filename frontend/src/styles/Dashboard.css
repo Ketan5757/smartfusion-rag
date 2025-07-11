@@ -198,7 +198,17 @@ ol.stored-docs-list li {
   font-size: 14px;
   color: #333;
   font-weight: 500;
+
+  /* ↓ new ↓ */
+  height: 30px;        /* fix the box height */
+  overflow-y: auto;    /* scroll when content overflows */
+  overflow-x: hidden;  /* prevent a horizontal scrollbar */
+  padding: 8px;        /* optional “breathing room” */
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
 }
+
 
 .submitted-files-inline {
   margin-top: 8px;
