@@ -68,63 +68,76 @@ const Dashboard = () => {
 
   // upload (handles both file and URL)
   const handleUploadSubmit = async () => {
-    setUploading(true);
-    setUploadError('');
-    try {
-      // 1️⃣ If user selected files, ingest them as PDFs/DOCX
-      if (files.length > 0) {
-        for (let f of files) {
-          const form = new FormData();
-          form.append('file', f);
-          form.append('country', uploadCountry);
-          form.append('job_area', uploadJobArea);
-          form.append('source_type', uploadSourceType);
-          form.append('target_group', 'Students');
-          form.append('owner', 'Ketan');
+  setUploading(true);
+  setUploadError('');
 
-          const res = await fetch('http://localhost:8000/ingest_pdf', {
-            method: 'POST',
-            body: form
-          });
-          const p = await res.json();
-          if (!res.ok) throw new Error(p.detail || 'Upload failed');
-        }
-        setSubmittedFiles(files.map(f => f.name));
-      }
-      // 2️⃣ Otherwise, if inputText is a URL, ingest it as HTML
-      else if (inputText.trim().match(/^https?:\/\//i)) {
-        const params = new URLSearchParams({
-          url: inputText.trim(),
-          country: uploadCountry,
-          job_area: uploadJobArea,
-          source_type: 'html',
-          target_group: 'Students',
-          owner: 'Ketan'
-        });
-        const res = await fetch(`http://localhost:8000/ingest_url?${params}`, {
-          method: 'POST'
+  try {
+    // 1️⃣ If user selected files, ingest them as PDFs/DOCX
+    if (files.length > 0) {
+      for (let f of files) {
+        const form = new FormData();
+        form.append('file', f);
+        form.append('country', uploadCountry);
+        form.append('job_area', uploadJobArea);
+        form.append('source_type', uploadSourceType);
+        form.append('target_group', 'Students');
+        form.append('owner', 'Ketan');
+
+        const res = await fetch('http://localhost:8000/ingest_pdf', {
+          method: 'POST',
+          body: form
         });
         const p = await res.json();
-        if (!res.ok) throw new Error(p.detail || 'URL ingest failed');
-        setSubmittedFiles([inputText.trim()]);
+        if (!res.ok) throw new Error(p.detail || 'Upload failed');
       }
-      // 3️⃣ Neither a file nor a valid URL? error out
-      else {
-        throw new Error('Please select a file or enter a valid URL (starting with http:// or https://)');
-      }
-
-      // refresh list of stored docs
-      const docs = await fetch('http://localhost:8000/documents').then(r => r.json());
-      setStoredDocs(docs.reverse());
-    } catch (e) {
-      setUploadError(e.message);
-    } finally {
-      setUploading(false);
-      setFiles([]);
-      setInputText('');
-      document.getElementById('file-upload').value = '';
+      // ⬆️ All files ingested successfully, now append their names to the list
+      setSubmittedFiles(prev => [
+        ...prev,
+        ...files.map(f => f.name)
+      ]);
     }
-  };
+    // 2️⃣ Otherwise, if inputText is a URL, ingest it as HTML
+    else if (inputText.trim().match(/^https?:\/\//i)) {
+      const params = new URLSearchParams({
+        url: inputText.trim(),
+        country: uploadCountry,
+        job_area: uploadJobArea,
+        source_type: 'html',
+        target_group: 'Students',
+        owner: 'Ketan'
+      });
+      const res = await fetch(`http://localhost:8000/ingest_url?${params}`, {
+        method: 'POST'
+      });
+      const p = await res.json();
+      if (!res.ok) throw new Error(p.detail || 'URL ingest failed');
+      // ⬆️ URL ingested successfully, now append it to the list
+      setSubmittedFiles(prev => [
+        ...prev,
+        inputText.trim()
+      ]);
+    }
+    // 3️⃣ Neither a file nor a valid URL? error out
+    else {
+      throw new Error(
+        'Please select a file or enter a valid URL (starting with http:// or https://)'
+      );
+    }
+
+    // Refresh stored docs list in the sidebar
+    const docs = await fetch('http://localhost:8000/documents')
+      .then(r => r.json());
+    setStoredDocs(docs.reverse());
+  } catch (e) {
+    setUploadError(e.message);
+  } finally {
+    setUploading(false);
+    setFiles([]);
+    setInputText('');
+    document.getElementById('file-upload').value = '';
+  }
+};
+
 
   // filter/search (always runs, k=5)
   const handleSearch = async () => {
