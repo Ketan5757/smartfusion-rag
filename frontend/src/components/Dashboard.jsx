@@ -338,17 +338,22 @@ const Dashboard = () => {
                 </button>
               </div>
               {searchError && <div className="error-text">❌ {searchError}</div>}
-              {uniqueDocsCount > 0 ? (
-                <div style={{ marginTop: '0.5rem', color: '#444' }}>
-                  Found <strong>{uniqueDocsCount}</strong> document
-                  {uniqueDocsCount > 1 ? 's' : ''} matching your filters:
-                  <ul style={{ margin: '0.25rem 0 0 1rem', padding: 0, listStyle: 'disc inside' }}>
-                    {uniqueDocs.map(fn => <li key={fn}>{stripExt(fn)}</li>)}
-                  </ul>
+              {uniqueDocsCount > 0 ? ( <>
+              <div className="filter-found">
+                Found <strong>{uniqueDocsCount}</strong> document
+                {uniqueDocsCount > 1 ? 's' : ''} matching your filters:
                 </div>
-              ) : !searchLoading && <p className="placeholder">No results to display.</p>}
-            </div>
-          </div>
+                <div className="filter-results">
+                  <ul>
+                    {uniqueDocs.map(fn => (
+                      <li key={fn}>{stripExt(fn)}</li>
+                      ))}
+                      </ul>
+                      </div>
+                      </>
+                    ) : !searchLoading && <p className="placeholder">No results to display.</p>}
+                    </div>
+                    </div>
 
           {/* Q&A */}
 <div className="question-row">

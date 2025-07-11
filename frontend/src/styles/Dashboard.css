@@ -464,3 +464,29 @@ ol.stored-docs-list li {
   font-weight: 500;           /* normal-to-medium text */
   color: #444;                /* medium grey for the message */
 }
+
+/* line above your existing .submitted-output */
+.filter-found {
+  margin-top: 0.5rem;
+  color: #444;
+  font-size: 14px;
+}
+
+/* scrollable container for the UL */
+.filter-results {
+  height: 40px;        /* fixed box height */
+  overflow-y: auto;    /* vertical scrollbar when needed */
+  overflow-x: hidden;  /* no horizontal scroll */
+  margin-top: 0.25rem;
+  padding-left: 1rem;  /* indent your bullets */
+  border: 1px solid #ddd;    /* optional styling */
+  border-radius: 4px;        /* optional styling */
+  background: #fff;          /* optional styling */
+}
+
+/* reset UL margins/padding; use inside-disc bullets */
+.filter-results ul {
+  margin: 0;
+  padding: 0;
+  list-style: disc inside;
+}
