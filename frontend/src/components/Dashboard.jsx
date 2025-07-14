@@ -5,7 +5,7 @@ import Footer from './Footer';
 import uploadIcon from '../assets/upload.png';
 import sendIcon   from '../assets/send.png';
 import micIcon    from '../assets/mic.png';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const Dashboard = () => {
   // helper to strip extensions
@@ -20,6 +20,7 @@ const Dashboard = () => {
 
   // Stored docs
   const [storedDocs, setStoredDocs]         = useState([]);
+  const chatContainerRef = useRef(null);
 
   // Metadata options
   const countryOptions    = ['Germany','India','France','Spain'];
@@ -229,6 +230,13 @@ const Dashboard = () => {
     }
   };
 
+  useEffect(() => {
+  const container = chatContainerRef.current;
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+}, [chatHistory]);
+
   return (
     <>
       <Header />
@@ -410,7 +418,7 @@ const Dashboard = () => {
   </div>
 
   {/* Scrollable chat history */}
-  <div className="chat-container">
+  <div className="chat-container" ref={chatContainerRef}>
   {chatHistory.length === 0 ? (
     <p className="placeholder">No messages yet.</p>
   ) : (
