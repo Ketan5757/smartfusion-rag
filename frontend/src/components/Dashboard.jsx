@@ -223,6 +223,8 @@ const Dashboard = () => {
         { role: 'user',      content: q },
         { role: 'assistant', content: p.answer }
       ]);
+      setQuestionText(''); 
+      
     } catch (e) {
       setError(e.message);
     } finally {
