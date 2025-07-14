@@ -35,6 +35,7 @@ const Dashboard = () => {
   const [countryFilter, setCountryFilter]        = useState('');
   const [jobAreaFilter, setJobAreaFilter]        = useState('');
   const [sourceTypeFilter, setSourceTypeFilter]  = useState('');
+  const [filtersApplied, setFiltersApplied]      = useState(false);
   const [results, setResults]                    = useState([]);
   const [searchLoading, setSearchLoading]        = useState(false);
   const [searchError, setSearchError]            = useState('');
@@ -135,12 +136,14 @@ const Dashboard = () => {
     setFiles([]);
     setInputText('');
     document.getElementById('file-upload').value = '';
+    setFiltersApplied(false);
   }
 };
 
 
     // filter/search
   const handleSearch = async () => {
+    setFiltersApplied(true);
     setSearchLoading(true)
     setSearchError('')
     setResults([])
@@ -200,13 +203,13 @@ const Dashboard = () => {
     setError('');
     setQueryLoading(true);
     try {
-      const body = {
-        question: q,
-        top_k: 5,
-        country: countryFilter || undefined,
-        job_area: jobAreaFilter || undefined,
-        source_type: sourceTypeFilter || undefined
-      };
+      const body = { question: q, top_k: 5 };
+      if (filtersApplied) {
+        if (countryFilter)    body.country     = countryFilter;
+        if (jobAreaFilter)    body.job_area    = jobAreaFilter;
+        if (sourceTypeFilter) body.source_type = sourceTypeFilter;
+      }
+
       const res = await fetch('http://localhost:8000/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
