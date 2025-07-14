@@ -1,70 +1,50 @@
-# Getting Started with Create React App
+# 🚀 SmartFusion RAG  
+**Hybrid AI Question Answering System for PDFs & Web Content**
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+SmartFusion RAG is an AI-powered document question-answering system developed as part of a Master's Thesis in Applied Computer Science. It enables users to ask natural language questions across large-scale **PDF documents** and **HTML webpages**, combining **semantic vector search** with **SQL-based metadata filtering** for precise and scalable Retrieval-Augmented Generation (RAG).
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 🧠 Thesis Objective
 
-### `npm start`
+The goal is to explore how to combine traditional metadata filtering (e.g., country, job area, source type) with modern embedding-based retrieval to create a robust and flexible question-answering system that works across unstructured document formats.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🎯 Research Questions
 
-### `npm test`
+1. How can document metadata be stored and used effectively for filtered retrieval in a Hybrid RAG system?  
+2. What is the best way to combine SQL-based metadata filtering with embedding-based document search?  
+3. How can large-scale text data (PDFs & HTML) be efficiently processed and stored for Retrieval-Augmented Generation?  
+4. How can follow-up questions improve user interaction in a multi-document RAG system?  
+5. *(Optional)* How does the inclusion of HTML pages and speech-to-text inputs affect performance and usability?
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## ✨ Key Features
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Upload and ingest **PDF documents** or **HTML web pages**
+- **Extract, chunk, and embed** document content using `text-embedding-3-small`
+- Store **semantic embeddings + metadata** in PostgreSQL using `pgvector`
+- **Ask questions** over stored content with **GPT-4.0 Turbo**
+- Apply **metadata filters** (country, job area, source type, etc.) at query time
+- Receive answers with source file references
+- Clean, modern **React frontend** and **FastAPI backend**
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 🛠️ Tech Stack
 
-### `npm run eject`
+| Layer         | Technology                        |
+|---------------|-----------------------------------|
+| Frontend      | React.js                          |
+| Backend       | FastAPI                           |
+| Embedding     | OpenAI `text-embedding-3-small`   |
+| LLM           | OpenAI GPT-4.0 Turbo              |
+| Database      | PostgreSQL + pgvector extension   |
+| Chunking      | LangChain Recursive Text Splitter |
+| PDF Parsing   | PyMuPDF (fitz)                    |
+| HTML Parsing  | BeautifulSoup                     |
+| Env Mgmt      | python-dotenv                     |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
