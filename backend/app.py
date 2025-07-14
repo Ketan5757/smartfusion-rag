@@ -366,12 +366,33 @@ def answer_question(req: QueryRequest):
 # ── Search endpoint ──
 @app.get("/search/")
 def search(
-    q: str = Query(..., description="Your query text"),
+    q: Optional[str] = Query(None),
     country: Optional[str] = Query(None),
     job_area: Optional[str] = Query(None),
     source_type: Optional[str] = Query(None),
     k: int = Query(5, ge=1, le=50)
 ):
+    
+    if not q or not q.strip():
+        filters, params = [], []
+        if country:     filters.append("country ILIKE %s");    params.append(f"%{country}%")
+        if job_area:    filters.append("job_area ILIKE %s");   params.append(f"%{job_area}%")
+        if source_type: filters.append("source_type ILIKE %s");params.append(f"%{source_type}%")
+        where = "WHERE " + " AND ".join(filters) if filters else ""
+        sql = f"""
+        SELECT filename
+        FROM documents
+        {where}
+        GROUP BY filename
+        ORDER BY MAX(creation_date) DESC
+        """
+        cur = get_db_connection().cursor()
+        cur.execute(sql, params)
+        files = [r[0] for r in cur.fetchall()]
+        cur.close()
+        return JSONResponse(content=[{"filename":f, "snippet":""} for f in files])
+
+
     # 1) embed the query
     emb = get_embedding(q)
 
@@ -442,19 +463,42 @@ def list_metadata():
     
     # ── List all stored filenames ──
 @app.get("/documents")
-def list_documents():
+def list_documents(
+    country: Optional[str] = Query(None, description="Filter by country"),
+    job_area: Optional[str] = Query(None, description="Filter by job_area"),
+    source_type: Optional[str] = Query(None, description="Filter by source_type"),
+):
     conn = get_db_connection()
     cur  = conn.cursor()
-    cur.execute("""
+
+    # build dynamic WHERE clauses
+    filters = []
+    params  = []
+    if country:
+        filters.append("country ILIKE %s")
+        params.append(f"%{country}%")
+    if job_area:
+        filters.append("job_area ILIKE %s")
+        params.append(f"%{job_area}%")
+    if source_type:
+        filters.append("source_type ILIKE %s")
+        params.append(f"%{source_type}%")
+
+    where_sql = ("WHERE " + " AND ".join(filters)) if filters else ""
+
+    sql = f"""
       SELECT filename
         FROM documents
+       {where_sql}
     GROUP BY filename
     ORDER BY MAX(creation_date) DESC
-    """)
+    """
+    cur.execute(sql, params)
     files = [row[0] for row in cur.fetchall()]
     cur.close()
     conn.close()
     return files
+
 
 # ── Delete a document’s chunks by filename ──
 @app.delete("/documents")

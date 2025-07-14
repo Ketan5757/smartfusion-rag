@@ -139,32 +139,53 @@ const Dashboard = () => {
 };
 
 
-  // filter/search (always runs, k=5)
+    // filter/search
   const handleSearch = async () => {
-    setSearchLoading(true);
-    setSearchError('');
-    setResults([]);
+    setSearchLoading(true)
+    setSearchError('')
+    setResults([])
+
     try {
-      // if no filters, just load all filenames
+      // 1️⃣ no filters at all ⇒ list every file
       if (!countryFilter && !jobAreaFilter && !sourceTypeFilter) {
-        const docs = await fetch('http://localhost:8000/documents').then(r => r.json());
-        // normalize to the same shape your UI expects
-        setResults(docs.map(fn => ({ filename: fn, snippet: '' })));
-      } else {
-      const params = new URLSearchParams({ q: '', k: 5 });
-      if (countryFilter) params.append('country', countryFilter);
-      if (jobAreaFilter) params.append('job_area', jobAreaFilter);
-      if (sourceTypeFilter) params.append('source_type', sourceTypeFilter);
-      const res = await fetch(`http://localhost:8000/search/?${params.toString()}`);
-      if (!res.ok) throw new Error(`Status ${res.status}`);
-      setResults(await res.json());
+        const docs = await fetch('http://localhost:8000/documents')
+                           .then(r => r.json())
+        setResults(docs.map(fn => ({ filename: fn, snippet: '' })))
+      }
+      // 2️⃣ filters set but no question text ⇒ metadata-only listing
+      else if (!questionText.trim()) {
+        const params = new URLSearchParams()
+        if (countryFilter)    params.append('country',    countryFilter)
+        if (jobAreaFilter)    params.append('job_area',    jobAreaFilter)
+        if (sourceTypeFilter) params.append('source_type', sourceTypeFilter)
+
+        // hits back to /documents with metadata filters
+        const docs = await fetch(
+          `http://localhost:8000/documents?${params.toString()}`
+        ).then(r => r.json())
+
+        setResults(docs.map(fn => ({ filename: fn, snippet: '' })))
+      }
+      // 3️⃣ real Q-and-A search ⇒ vector search endpoint
+      else {
+        const params = new URLSearchParams({ q: questionText, k: 5 })
+        if (countryFilter)    params.append('country',    countryFilter)
+        if (jobAreaFilter)    params.append('job_area',    jobAreaFilter)
+        if (sourceTypeFilter) params.append('source_type', sourceTypeFilter)
+
+        const res = await fetch(
+          `http://localhost:8000/search/?${params.toString()}`
+        )
+        if (!res.ok) throw new Error(`Status ${res.status}`)
+        setResults(await res.json())
       }
     } catch (e) {
-      setSearchError(e.message);
+      setSearchError(e.message)
     } finally {
-      setSearchLoading(false);
+      setSearchLoading(false)
     }
-  };
+  }
+
 
   // unique docs
   const uniqueDocs = Array.from(new Set(results.map(r => r.filename)));

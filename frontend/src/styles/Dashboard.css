@@ -101,6 +101,7 @@ ol.stored-docs-list li {
   height: 100%;
   padding: 30px;
   background-color: #e8eff4; 
+  overflow-y: auto; 
 }
 
 .dashboard-right h1 {
@@ -226,6 +227,9 @@ ol.stored-docs-list li {
   gap: 6px;
   width: 100%;
   position: relative;
+  position: sticky;
+  top: 200px;          /* ← tweak this number so “Ask Questions about” sits exactly where it is now */
+  z-index: 1;   
 }
 
 .question-label {
