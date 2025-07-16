@@ -6,8 +6,8 @@ import uploadIcon from '../assets/upload.png';
 import sendIcon   from '../assets/send.png';
 import micIcon    from '../assets/mic.png';
 import { useState, useEffect, useRef } from 'react';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import VolumeOffIcon  from '@mui/icons-material/VolumeOff';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+
 
 const Dashboard = () => {
   // helper to strip extensions
@@ -19,7 +19,6 @@ const Dashboard = () => {
   const [submittedFiles, setSubmittedFiles] = useState([]);
   const [uploading, setUploading]           = useState(false);
   const [uploadError, setUploadError]       = useState('');
-  const [speakingIndex, setSpeakingIndex] = useState(null);
   const [recording, setRecording] = useState(false);
   const mediaRecorderRef              = useRef(null);
   const audioStreamRef                = useRef(null);
@@ -123,37 +122,21 @@ useEffect(() => {
 }, []);
 
 
-
-// ─── Now define handleSpeak ─────────────────────────
-const handleSpeak = (text, idx) => {
-  // 1️⃣ Cancel anything still in flight:
-  window.speechSynthesis.cancel();
-
-  // 2️⃣ Toggle off if it’s the same bubble:
-  if (speakingIndex === idx) {
-    setSpeakingIndex(null);
-    return;
+// TTS Feature
+const playTTS = async (text) => {
+  try {
+    const res = await fetch('http://localhost:8000/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ text }),
+    });
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.play();
+  } catch (e) {
+    console.error('TTS playback failed', e);
   }
-  setSpeakingIndex(idx);
-
-  // 3️⃣ Split into short chunks (<150 chars) to avoid browser cutoff:
-  const chunks = [];
-  for (let i = 0; i < text.length; i += 150) {
-    chunks.push(text.substring(i, i + 150));
-  }
-
-  // 4️⃣ Immediately queue them all under this click:
-  chunks.forEach((chunk, i) => {
-    const u = new SpeechSynthesisUtterance(chunk);
-    u.lang = 'en-US';
-    u.onstart = () => console.log('▶️ start chunk', i);
-    u.onend   = () => {
-      console.log('🛑 end chunk', i);
-      // once the last chunk ends, clear the flag
-      if (i === chunks.length - 1) setSpeakingIndex(null);
-    };
-    window.speechSynthesis.speak(u);
-  });
 };
 
   // load stored docs
@@ -528,38 +511,39 @@ const handleSpeak = (text, idx) => {
     />
   </div>
 
-  {/* Scrollable chat history */}
-  <div className="chat-container" ref={chatContainerRef}>
-  {chatHistory.length === 0
-    ? <p className="placeholder">No messages yet.</p>
-    : chatHistory.map((msg, i) =>
-        msg.role === 'user' ? (
-          <div key={i} className="chat-user" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="chat-user-icon">👤 ⇒ </span>
-            <span className="chat-user-text">{msg.content}</span>
-          </div>
-        ) : (
-          <div key={i} className="chat-assistant" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="chat-assistant-icon">🤖 ⇒ </span>
-            <span className="chat-assistant-text" style={{ flexGrow: 1 }}>
-              {msg.content}
-            </span>
-
-            {speakingIndex === i ? (
-              <VolumeUpIcon
-              onClick={() => handleSpeak(msg.content, i)}
-              sx={{ cursor: 'pointer', fontSize: 24 }}
-              />
-            ) : (
-            <VolumeOffIcon
-            onClick={() => handleSpeak(msg.content, i)}
-            sx={{ cursor: 'pointer', fontSize: 24 }}
-            />
-            )}
-          </div>
-        )
+{/* Scrollable chat history */}
+<div className="chat-container" ref={chatContainerRef}>
+  {chatHistory.length === 0 ? (
+    <p className="placeholder">No messages yet.</p>
+  ) : (
+    chatHistory.map((msg, i) =>
+      msg.role === 'user' ? (
+        <div
+          key={i}
+          className="chat-user"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <span className="chat-user-icon">👤 ⇒</span>
+          <span className="chat-user-text">{msg.content}</span>
+        </div>
+      ) : (
+        <div
+          key={i}
+          className="chat-assistant"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <span className="chat-assistant-icon">🤖 ⇒</span>
+          <span className="chat-assistant-text" style={{ flexGrow: 1 }}>
+            {msg.content}
+          </span>
+          <PlayArrowIcon
+            sx={{ cursor: 'pointer', fontSize: 24, marginLeft: '0.5rem' }}
+            onClick={() => playTTS(msg.content)}
+          />
+        </div>
       )
-  }
+    )
+  )}
 </div>
 
 {error && <div className="error-text">❌ {error}</div>}

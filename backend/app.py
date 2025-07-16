@@ -24,6 +24,8 @@ from urllib.parse import urlparse
 from fastapi import UploadFile, File
 from fastapi import HTTPException
 from io import BytesIO
+import base64
+from fastapi.responses import Response
 
 # ── Setup upload directory ──
 BASE_DIR = os.path.dirname(__file__)
@@ -532,6 +534,30 @@ async def transcribe_audio(file: UploadFile = File(...)):
         return {"transcript": result_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+@app.post("/api/tts")
+async def tts(text: str = Form(...)):
+    """
+    Receives `text` as form-data, calls OpenAI TTS (non-streaming),
+    decodes base64 MP3, and returns it with the correct MIME type.
+    """
+    try:
+        # Tell OpenAI not to stream, so they return base64 in one go
+        resp = openai.Audio.speech.create(
+            model="tts-1",
+            voice="alloy",        # choose your voice
+            input=text,
+            format="mp3",
+            stream=False
+        )
+        # resp["audio"] is a base64-encoded MP3
+        audio_bytes = base64.b64decode(resp["audio"])
+        return Response(content=audio_bytes, media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ── Startup log ──
 @app.on_event("startup")
