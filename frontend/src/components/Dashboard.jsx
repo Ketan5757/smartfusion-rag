@@ -6,10 +6,38 @@ import uploadIcon from '../assets/upload.png';
 import sendIcon   from '../assets/send.png';
 import micIcon    from '../assets/mic.png';
 import { useState, useEffect, useRef } from 'react';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeOffIcon  from '@mui/icons-material/VolumeOff';
 
 const Dashboard = () => {
   // helper to strip extensions
   const stripExt = name => name.replace(/\.[^/.]+$/, '');
+
+  // ▶︎ Put it here, just before the return
+  const handleSpeak = (text, idx) => {
+  const synth = window.speechSynthesis;
+  if (!synth) return alert('SpeechSynthesis not supported!');
+
+  // If the same message is already speaking, stop it:
+  if (synth.speaking && speakingIndex === idx) {
+    synth.cancel();
+    setSpeakingIndex(null);
+    return;
+  }
+  // Otherwise cancel any other speech:
+  if (synth.speaking) {
+    synth.cancel();
+  }
+
+  // Start speaking this one:
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US'; // adjust as needed
+
+  utterance.onstart = () => setSpeakingIndex(idx);
+  utterance.onend   = () => setSpeakingIndex(null);
+
+  synth.speak(utterance);
+};
 
   // Upload state
   const [inputText, setInputText]           = useState('');
@@ -17,6 +45,7 @@ const Dashboard = () => {
   const [submittedFiles, setSubmittedFiles] = useState([]);
   const [uploading, setUploading]           = useState(false);
   const [uploadError, setUploadError]       = useState('');
+  const [speakingIndex, setSpeakingIndex] = useState(null);
 
   // Stored docs
   const [storedDocs, setStoredDocs]         = useState([]);
@@ -421,26 +450,39 @@ const Dashboard = () => {
 
   {/* Scrollable chat history */}
   <div className="chat-container" ref={chatContainerRef}>
-  {chatHistory.length === 0 ? (
-    <p className="placeholder">No messages yet.</p>
-  ) : (
-    chatHistory.map((msg, i) =>
-      msg.role === 'user' ? (
-        <div key={i} className="chat-user">
-          <span className="chat-user-icon">👤 ⇒ </span>
-          <span className="chat-user-text">{msg.content}</span>
-        </div>
-      ) : (
-        <div key={i} className="chat-assistant">
-          <span className="chat-assistant-icon">🤖 ⇒ </span>
-          <span className="chat-assistant-text">{msg.content}</span>
-        </div>
+  {chatHistory.length === 0
+    ? <p className="placeholder">No messages yet.</p>
+    : chatHistory.map((msg, i) =>
+        msg.role === 'user' ? (
+          <div key={i} className="chat-user" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="chat-user-icon">👤 ⇒ </span>
+            <span className="chat-user-text">{msg.content}</span>
+          </div>
+        ) : (
+          <div key={i} className="chat-assistant" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="chat-assistant-icon">🤖 ⇒ </span>
+            <span className="chat-assistant-text" style={{ flexGrow: 1 }}>
+              {msg.content}
+            </span>
+
+            {speakingIndex === i ? (
+              <VolumeUpIcon
+                onClick={() => handleSpeak(msg.content, i)}
+                sx={{ cursor: 'pointer', fontSize: 24 }}
+              />
+            ) : (
+              <VolumeOffIcon
+                onClick={() => handleSpeak(msg.content, i)}
+                sx={{ cursor: 'pointer', fontSize: 24 }}
+              />
+            )}
+          </div>
+        )
       )
-    )
-  )}
+  }
 </div>
 
-  {error && <div className="error-text">❌ {error}</div>}
+{error && <div className="error-text">❌ {error}</div>}
   </div>
   </div>
   </div>
