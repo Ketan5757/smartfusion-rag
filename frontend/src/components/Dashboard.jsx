@@ -13,32 +13,6 @@ const Dashboard = () => {
   // helper to strip extensions
   const stripExt = name => name.replace(/\.[^/.]+$/, '');
 
-  // ▶︎ Put it here, just before the return
-  const handleSpeak = (text, idx) => {
-  const synth = window.speechSynthesis;
-  if (!synth) return alert('SpeechSynthesis not supported!');
-
-  // If the same message is already speaking, stop it:
-  if (synth.speaking && speakingIndex === idx) {
-    synth.cancel();
-    setSpeakingIndex(null);
-    return;
-  }
-  // Otherwise cancel any other speech:
-  if (synth.speaking) {
-    synth.cancel();
-  }
-
-  // Start speaking this one:
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US'; // adjust as needed
-
-  utterance.onstart = () => setSpeakingIndex(idx);
-  utterance.onend   = () => setSpeakingIndex(null);
-
-  synth.speak(utterance);
-};
-
   // Upload state
   const [inputText, setInputText]           = useState('');
   const [files, setFiles]                   = useState([]);
@@ -46,6 +20,9 @@ const Dashboard = () => {
   const [uploading, setUploading]           = useState(false);
   const [uploadError, setUploadError]       = useState('');
   const [speakingIndex, setSpeakingIndex] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const mediaRecorderRef              = useRef(null);
+  const audioStreamRef                = useRef(null);
 
   // Stored docs
   const [storedDocs, setStoredDocs]         = useState([]);
@@ -77,6 +54,120 @@ const Dashboard = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [error, setError]                        = useState('');
   const [queryLoading, setQueryLoading]          = useState(false);
+
+   const handleMicClick = async () => {
+  // ▶︎ Start recording
+  if (!mediaRecorderRef.current) {
+    console.log("🎤 Starting recording...");
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioStreamRef.current = stream;
+
+    const recorder = new MediaRecorder(stream);
+    const chunks   = [];
+
+    recorder.ondataavailable = e => {
+      chunks.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      console.log("🛑 Recording stopped. Chunks count:", chunks.length);
+      audioStreamRef.current.getTracks().forEach(t => t.stop());
+
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      console.log("🕵️ Recorded blob size:", blob.size);
+
+      const form = new FormData();
+      form.append("file", blob, "speech.webm");
+
+      // ▶︎ Send to Whisper
+      try {
+        console.log("🚀 Sending to /api/transcribe …");
+        const res = await fetch("http://localhost:8000/api/transcribe", {
+          method: "POST",
+          body: form,
+        });
+        const json = await res.json();
+        console.log("✅ Transcribe response:", json);
+        setQuestionText(json.transcript || "");
+      } catch (err) {
+        console.error("❌ Transcription error", err);
+      }
+
+      mediaRecorderRef.current = null;
+    };
+
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+    setRecording(true);
+  }
+  // ▶︎ Stop recording
+  else {
+    console.log("🛑 Stopping recording…");
+    mediaRecorderRef.current.stop();
+    setRecording(false);
+  }
+};
+
+
+useEffect(() => {
+  // Chrome may load voices asynchronously
+  const loadVoices = () => {
+    const voices = window.speechSynthesis.getVoices();
+    console.log('💬 voices available:', voices);
+  };
+
+  // Try immediately…
+  loadVoices();
+  // …and again when they finish loading
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}, []);
+
+
+
+// ─── Now define handleSpeak ─────────────────────────
+const handleSpeak = (text, idx) => {
+  console.log('🔊 handleSpeak called for index', idx);
+
+  // 1) always cancel anything currently speaking
+  window.speechSynthesis.cancel();
+
+  // 2) if you clicked the same bubble, just toggle off
+  if (speakingIndex === idx) {
+    setSpeakingIndex(null);
+    return;
+  }
+
+  setSpeakingIndex(idx);
+
+  // 3) split text into sentences (keep the punctuation) 
+  const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) 
+              || [text];
+
+  // 4) pick an English voice (or fallback)
+  const voices = window.speechSynthesis.getVoices();
+  const voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+
+  // 5) enqueue each sentence
+  sentences.forEach((sentence, i) => {
+    const u = new SpeechSynthesisUtterance(sentence.trim());
+    u.lang = 'en-US';
+    if (voice) u.voice = voice;
+    u.rate   = 1;
+    u.pitch  = 1;
+    u.volume = 1;
+
+    // only on the last one clear your “speaking” flag
+    if (i === sentences.length - 1) {
+      u.onend = () => {
+        console.log('🛑 Speech ended for index', idx);
+        setSpeakingIndex(null);
+      };
+    }
+
+    window.speechSynthesis.speak(u);
+  });
+};
+
 
   // load stored docs
   useEffect(() => {
@@ -435,11 +526,13 @@ const Dashboard = () => {
       style={{ flexGrow: 1 }}
     />
     <img
-      src={micIcon}
-      className="upload-icon"
-      alt="Mic"
-      onClick={handleAskQuestion}
-    />
+  src={micIcon}
+  className="upload-icon"
+  alt="Mic"
+  style={{ opacity: recording ? 0.5 : 1 }}
+  onClick={handleMicClick}
+/>
+
     <img
       src={sendIcon}
       className="upload-icon"
@@ -467,14 +560,14 @@ const Dashboard = () => {
 
             {speakingIndex === i ? (
               <VolumeUpIcon
-                onClick={() => handleSpeak(msg.content, i)}
-                sx={{ cursor: 'pointer', fontSize: 24 }}
+              onClick={() => handleSpeak(msg.content, i)}
+              sx={{ cursor: 'pointer', fontSize: 24 }}
               />
             ) : (
-              <VolumeOffIcon
-                onClick={() => handleSpeak(msg.content, i)}
-                sx={{ cursor: 'pointer', fontSize: 24 }}
-              />
+            <VolumeOffIcon
+            onClick={() => handleSpeak(msg.content, i)}
+            sx={{ cursor: 'pointer', fontSize: 24 }}
+            />
             )}
           </div>
         )

@@ -21,6 +21,9 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from typing import Any
 from urllib.parse import urlparse
+from fastapi import UploadFile, File
+from fastapi import HTTPException
+from io import BytesIO
 
 # ── Setup upload directory ──
 BASE_DIR = os.path.dirname(__file__)
@@ -511,7 +514,25 @@ def delete_document(filename: str = Query(..., description="Filename to delete")
     conn.close()
     return {"detail": f"Deleted all chunks for {filename}"}
 
-    
+@app.post("/api/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    try:
+        data = await file.read()
+        bytes_io = BytesIO(data)
+        bytes_io.name = file.filename
+
+        # Legacy call, but with response_format="text":
+        # this returns the raw transcript string, not a JSON object
+        result_text = openai.Audio.transcribe(
+            "whisper-1",
+            file=bytes_io,
+            response_format="text",
+            temperature=0.0
+        )
+        return {"transcript": result_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ── Startup log ──
 @app.on_event("startup")
 def on_startup():
