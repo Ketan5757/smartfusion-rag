@@ -126,48 +126,35 @@ useEffect(() => {
 
 // ─── Now define handleSpeak ─────────────────────────
 const handleSpeak = (text, idx) => {
-  console.log('🔊 handleSpeak called for index', idx);
-
-  // 1) always cancel anything currently speaking
+  // 1️⃣ Cancel anything still in flight:
   window.speechSynthesis.cancel();
 
-  // 2) if you clicked the same bubble, just toggle off
+  // 2️⃣ Toggle off if it’s the same bubble:
   if (speakingIndex === idx) {
     setSpeakingIndex(null);
     return;
   }
-
   setSpeakingIndex(idx);
 
-  // 3) split text into sentences (keep the punctuation) 
-  const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) 
-              || [text];
+  // 3️⃣ Split into short chunks (<150 chars) to avoid browser cutoff:
+  const chunks = [];
+  for (let i = 0; i < text.length; i += 150) {
+    chunks.push(text.substring(i, i + 150));
+  }
 
-  // 4) pick an English voice (or fallback)
-  const voices = window.speechSynthesis.getVoices();
-  const voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-
-  // 5) enqueue each sentence
-  sentences.forEach((sentence, i) => {
-    const u = new SpeechSynthesisUtterance(sentence.trim());
+  // 4️⃣ Immediately queue them all under this click:
+  chunks.forEach((chunk, i) => {
+    const u = new SpeechSynthesisUtterance(chunk);
     u.lang = 'en-US';
-    if (voice) u.voice = voice;
-    u.rate   = 1;
-    u.pitch  = 1;
-    u.volume = 1;
-
-    // only on the last one clear your “speaking” flag
-    if (i === sentences.length - 1) {
-      u.onend = () => {
-        console.log('🛑 Speech ended for index', idx);
-        setSpeakingIndex(null);
-      };
-    }
-
+    u.onstart = () => console.log('▶️ start chunk', i);
+    u.onend   = () => {
+      console.log('🛑 end chunk', i);
+      // once the last chunk ends, clear the flag
+      if (i === chunks.length - 1) setSpeakingIndex(null);
+    };
     window.speechSynthesis.speak(u);
   });
 };
-
 
   // load stored docs
   useEffect(() => {
