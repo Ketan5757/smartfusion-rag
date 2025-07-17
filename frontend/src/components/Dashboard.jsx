@@ -192,7 +192,7 @@ const playTTS = async (text) => {
   setUploadError('');
 
   try {
-    // 1️⃣ If user selected files, ingest them as PDFs/DOCX
+    // If user selected files, ingest them as PDFs/DOCX
     if (files.length > 0) {
       for (let f of files) {
         const form = new FormData();
@@ -210,13 +210,13 @@ const playTTS = async (text) => {
         const p = await res.json();
         if (!res.ok) throw new Error(p.detail || 'Upload failed');
       }
-      // ⬆️ All files ingested successfully, now append their names to the list
+      // All files ingested successfully, now append their names to the list
       setSubmittedFiles(prev => [
         ...prev,
         ...files.map(f => f.name)
       ]);
     }
-    // 2️⃣ Otherwise, if inputText is a URL, ingest it as HTML
+    // Otherwise, if inputText is a URL, ingest it as HTML
     else if (inputText.trim().match(/^https?:\/\//i)) {
       const params = new URLSearchParams({
         url: inputText.trim(),
@@ -231,13 +231,13 @@ const playTTS = async (text) => {
       });
       const p = await res.json();
       if (!res.ok) throw new Error(p.detail || 'URL ingest failed');
-      // ⬆️ URL ingested successfully, now append it to the list
+      // URL ingested successfully, now append it to the list
       setSubmittedFiles(prev => [
         ...prev,
         inputText.trim()
       ]);
     }
-    // 3️⃣ Neither a file nor a valid URL? error out
+    // Neither a file nor a valid URL? error out
     else {
       throw new Error(
         'Please select a file or enter a valid URL (starting with http:// or https://)'
@@ -268,13 +268,13 @@ const playTTS = async (text) => {
     setResults([])
 
     try {
-      // 1️⃣ no filters at all ⇒ list every file
+      //  no filters at all ⇒ list every file
       if (!countryFilter && !jobAreaFilter && !sourceTypeFilter) {
         const docs = await fetch('http://localhost:8000/documents')
                            .then(r => r.json())
         setResults(docs.map(fn => ({ filename: fn, snippet: '' })))
       }
-      // 2️⃣ filters set but no question text ⇒ metadata-only listing
+      // filters set but no question text ⇒ metadata-only listing
       else if (!questionText.trim()) {
         const params = new URLSearchParams()
         if (countryFilter)    params.append('country',    countryFilter)
@@ -288,7 +288,7 @@ const playTTS = async (text) => {
 
         setResults(docs.map(fn => ({ filename: fn, snippet: '' })))
       }
-      // 3️⃣ real Q-and-A search ⇒ vector search endpoint
+      // real Q-and-A search ⇒ vector search endpoint
       else {
         const params = new URLSearchParams({ q: questionText, k: 5 })
         if (countryFilter)    params.append('country',    countryFilter)

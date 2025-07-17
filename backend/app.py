@@ -534,7 +534,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
         # whisper only needs the model param
         payload = {
             "model":    "whisper-1",
-            "language": "en"    # force English transcription
+            "language": "en"    
             }
 
         # 3) Call REST API
