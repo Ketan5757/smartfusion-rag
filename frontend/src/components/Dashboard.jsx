@@ -12,6 +12,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 const Dashboard = () => {
   // helper to strip extensions
   const stripExt = name => name.replace(/\.[^/.]+$/, '');
+  const audioRef = useRef(null);
 
   // Upload state
   const [inputText, setInputText]           = useState('');
@@ -124,20 +125,47 @@ useEffect(() => {
 
 // TTS Feature
 const playTTS = async (text) => {
-  try {
-    const res = await fetch('http://localhost:8000/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ text }),
-    });
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.play();
-  } catch (e) {
-    console.error('TTS playback failed', e);
-  }
-};
+    try {
+      // 1️⃣ If there’s already an Audio playing, stop it and clear the ref
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+        return;
+      }
+
+      // 2️⃣ Otherwise, fetch a new MP3 from your backend
+      const res = await fetch('http://localhost:8000/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ text }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.detail || payload.error || `Status ${res.status}`);
+      }
+
+      // 3️⃣ Wrap in a Blob so the browser knows it’s MPEG
+      const buffer = await res.arrayBuffer();
+      const blob   = new Blob([buffer], { type: 'audio/mpeg' });
+      const url    = URL.createObjectURL(blob);
+
+      // 4️⃣ Create a new Audio, store it in the ref, and play
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      // 5️⃣ When playback ends, clear the ref so the next click will re-fetch
+      audio.onended = () => {
+        audioRef.current = null;
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.error('TTS playback failed:', err);
+    }
+  };
+
 
   // load stored docs
   useEffect(() => {

@@ -23,6 +23,7 @@ from typing import Any
 from urllib.parse import urlparse
 from fastapi import UploadFile, File
 from fastapi import HTTPException
+import traceback
 from io import BytesIO
 import base64
 from fastapi.responses import Response
@@ -518,45 +519,106 @@ def delete_document(filename: str = Query(..., description="Filename to delete")
 
 @app.post("/api/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
+    """
+    Reads an audio/webm blob, POSTs to OpenAI’s whisper transcription
+    REST endpoint, and returns the transcript text.
+    """
     try:
+        # 1) Read raw bytes
         data = await file.read()
-        bytes_io = BytesIO(data)
-        bytes_io.name = file.filename
 
-        # Legacy call, but with response_format="text":
-        # this returns the raw transcript string, not a JSON object
-        result_text = openai.Audio.transcribe(
-            "whisper-1",
-            file=bytes_io,
-            response_format="text",
-            temperature=0.0
+        # 2) Prepare multipart/form-data payload
+        files = {
+            "file": (file.filename, data, file.content_type),
+        }
+        # whisper only needs the model param
+        payload = {
+            "model":    "whisper-1",
+            "language": "en"    # force English transcription
+            }
+
+        # 3) Call REST API
+        resp = requests.post(
+            "https://api.openai.com/v1/audio/transcriptions",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+            data=payload,
+            files=files,
         )
-        return {"transcript": result_text}
+        resp.raise_for_status()
+
+        # 4) Parse JSON and return
+        json_ = resp.json()
+        return {"transcript": json_["text"]}
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {e}")
     
 
 
 @app.post("/api/tts")
 async def tts(text: str = Form(...)):
     """
-    Receives `text` as form-data, calls OpenAI TTS (non-streaming),
-    decodes base64 MP3, and returns it with the correct MIME type.
+    Receives `text` as form-data, calls OpenAI’s REST /v1/audio/speech endpoint,
+    and returns raw MP3 bytes with the correct MIME type.
     """
     try:
-        # Tell OpenAI not to stream, so they return base64 in one go
-        resp = openai.Audio.speech.create(
-            model="tts-1",
-            voice="alloy",        # choose your voice
-            input=text,
-            format="mp3",
-            stream=False
+        payload = {
+            "model":  "tts-1",
+            "voice":  "alloy",
+            "input":  text,
+            "format": "mp3",
+            "stream": False
+        }
+        headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type":  "application/json"
+        }
+
+        # Send the request
+        r = requests.post(
+            "https://api.openai.com/v1/audio/speech",
+            headers=headers,
+            json=payload,
+            timeout=60
         )
-        # resp["audio"] is a base64-encoded MP3
-        audio_bytes = base64.b64decode(resp["audio"])
+        r.raise_for_status()
+
+        # If the response is raw audio, grab bytes directly
+        content_type = r.headers.get("Content-Type", "")
+        if content_type.startswith("audio/"):
+            audio_bytes = r.content
+        else:
+            # Otherwise expect a JSON body with base64-encoded "audio"
+            try:
+                data = r.json()
+            except ValueError:
+                print("❌ TTS upstream returned invalid JSON:\n", r.text)
+                raise HTTPException(
+                    status_code=500,
+                    detail="TTS failed: upstream returned invalid JSON"
+                )
+
+            audio_b64 = data.get("audio")
+            if not audio_b64:
+                print("❌ TTS JSON missing ‘audio’ key:", data)
+                raise HTTPException(
+                    status_code=500,
+                    detail="TTS failed: no audio in response"
+                )
+            audio_bytes = base64.b64decode(audio_b64)
+
+        # Return raw MP3 bytes
         return Response(content=audio_bytes, media_type="audio/mpeg")
+
+    except HTTPException:
+        # Re-throw known HTTPExceptions
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Log unexpected errors
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"TTS failed: {e}")
+
 
 
 # ── Startup log ──
