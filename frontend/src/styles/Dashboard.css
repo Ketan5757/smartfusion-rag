@@ -38,8 +38,8 @@
   width: 260px;
   padding: 1rem;
   box-sizing: border-box;
-  overflow-y: auto;                   /* make it scrollable */
-  max-height: calc(100vh - 2rem);     /* allow for header/footer */
+  overflow-y: auto;                
+  max-height: calc(100vh - 2rem);     
   border-right: 1px solid #e0e0e0;
 }
 
@@ -50,12 +50,12 @@ ol.stored-docs-list {
   padding-left: 1.2rem;
 }
 
-/* make sure li’s inside it have no “none” overriding them */
+
 ol.stored-docs-list li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;            /* space between the button and filename */
-  margin-bottom: 0.5rem;  /* space between items */
+  gap: 0.5rem;            
+  margin-bottom: 0.5rem;  
   word-break: break-all;
 }
 
@@ -77,13 +77,13 @@ ol.stored-docs-list li {
   font-style: italic;
 }
 
-/* rest of your existing styles… */
+
 
 
 /*Dashboard division*/
 .dashboard-wrapper {
   display: flex;
-  height: calc(100vh - 120px); /* Adjust if your header/footer are different */
+  height: calc(100vh - 120px); 
   margin: 0;
   padding: 0;
 }
@@ -228,8 +228,7 @@ ol.stored-docs-list li {
   width: 100%;
   position: relative;
   position: sticky;
-  top: 200px;          /* ← tweak this number so “Ask Questions about” sits exactly where it is now */
-  z-index: 1;   
+  top: 200px;          
 }
 
 .question-label {
@@ -287,8 +286,8 @@ ol.stored-docs-list li {
 /* Make the white box (upload-box) a fixed max width and center it */
 .upload-box {
   width: 100%;
-  max-width: 600px;        /* tweak as needed */
-  box-sizing: border-box;  /* ensure padding doesn’t overflow */
+  max-width: 600px;        
+  box-sizing: border-box;  
 }
 
 /* Ensure the inputs inside have room and wrap if necessary */
@@ -302,45 +301,42 @@ ol.stored-docs-list li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  padding: 0.5rem; /* match your existing padding */
+  padding: 0.5rem; 
 }
 
 .filter-input {
-  flex: 1 1 120px;    /* grow and shrink, min-width 120px */
-  margin: 0.15rem;    /* spacing between fields */
+  flex: 1 1 120px;    
+  margin: 0.15rem;    
 }
 
 .filter-label {
   font-size: 16px;
   font-weight: 500;
   color: #000;
-  font-size: 1rem; /* adjust as needed */
+  font-size: 1rem; 
 }
 
-/* ————————————— */
+
 /* Top row: two equal halves */
-/* ————————————— */
 .top-row {
   display: flex;
-  justify-content: space-between; /* spread them out */
+  justify-content: space-between; 
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.5rem;
   flex-wrap: nowrap;
 }
 
-/* ————————————— */
+
 /* Each wrapper: take ~48% */
-/* ————————————— */
 .upload-wrapper,
 .filter-wrapper {
-  flex: 0 0 48%;    /* each box is roughly half of that row */
-  min-width: 280px; /* won’t go too small on narrow screens */
+  flex: 0 0 48%;    
+  min-width: 280px; 
 }
 
-/* ————————————— */
+
 /* Make inner boxes fit their wrapper */
-/* ————————————— */
 .upload-wrapper .upload-box,
 .filter-wrapper .upload-box {
   width: 100%;
@@ -357,14 +353,13 @@ ol.stored-docs-list li {
   overflow: hidden;
 }
 
-/* ————————————— */
+
 /* Text inputs fill remaining space */
-/* ————————————— */
 .upload-wrapper input[type="text"],
 .filter-wrapper .filter-input,
 .filter-wrapper input[type="number"] {
-  flex: 1 1 auto;    /* take up all leftover space */
-  min-width: 80px;   /* but never smaller than this */
+  flex: 1 1 auto;    
+  min-width: 80px;  
   height: 38px;
   padding: 0 0.75rem;
   font-size: 0.95rem;
@@ -373,9 +368,8 @@ ol.stored-docs-list li {
   box-sizing: border-box;
 }
 
-/* ————————————— */
+
 /* Icon buttons stay fixed size */
-/* ————————————— */
 .upload-wrapper .upload-icon,
 .filter-wrapper .upload-icon {
   flex: 0 0 auto;
@@ -387,15 +381,15 @@ ol.stored-docs-list li {
 /* Reduce card padding */
 .upload-wrapper .upload-box,
 .filter-wrapper .upload-box {
-  padding: 0.3rem 0.65rem;   /* was 0.75rem 1rem */
+  padding: 0.3rem 0.65rem;  
 }
 
 /* Reduce input height */
 .upload-wrapper input[type="text"],
 .filter-wrapper .filter-input,
 .filter-wrapper input[type="number"] {
-  height: 28px;             /* was 38px */
-  padding: 0 0.5rem;        /* slightly less padding inside */
+  height: 28px;            
+  padding: 0 0.5rem;        
 }
 
 .top-row .upload-wrapper .upload-icon,
@@ -436,12 +430,12 @@ ol.stored-docs-list li {
   color: #1E90FF;    /* DodgerBlue */
   /* color: #2ECC71;  /* Emerald Green */
   /* color: #6C757D;  /* Muted Gray */
-  font-size: 1.2em;  /* slightly larger than text */
+  font-size: 1.2em;  
 }
 
 .chat-user-text {
-  font-weight: 400;  /* normal weight, not too bold */
-  color: #333;       /* dark gray, not full black */
+  font-weight: 400;  
+  color: #333;      
 }
 
 .chat-assistant {
@@ -458,14 +452,14 @@ ol.stored-docs-list li {
 }
 
 .chat-user-label {
-  font-weight: 700;           /* bold */
-  color: #222;                /* dark grey */
+  font-weight: 700;          
+  color: #222;                
   margin-right: 0.5rem;
 }
 
 .chat-user-content {
-  font-weight: 500;           /* normal-to-medium text */
-  color: #444;                /* medium grey for the message */
+  font-weight: 500;           
+  color: #444;              
 }
 
 /* line above your existing .submitted-output */
@@ -477,14 +471,14 @@ ol.stored-docs-list li {
 
 /* scrollable container for the UL */
 .filter-results {
-  height: 40px;        /* fixed box height */
-  overflow-y: auto;    /* vertical scrollbar when needed */
-  overflow-x: hidden;  /* no horizontal scroll */
+  height: 40px;        
+  overflow-y: auto;    
+  overflow-x: hidden;  
   margin-top: 0.25rem;
-  padding-left: 1rem;  /* indent your bullets */
-  border: 1px solid #ddd;    /* optional styling */
-  border-radius: 4px;        /* optional styling */
-  background: #fff;          /* optional styling */
+  padding-left: 1rem; 
+  border: 1px solid #ddd;    
+  border-radius: 4px;        
+  background: #fff;         
 }
 
 /* reset UL margins/padding; use inside-disc bullets */
