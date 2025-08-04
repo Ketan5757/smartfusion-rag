@@ -27,6 +27,20 @@ import traceback
 from io import BytesIO
 import base64
 from fastapi.responses import Response
+from pydantic import BaseModel
+from typing import List, Literal, Optional
+
+
+class Message(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: List[Message]
+    top_k: int
+    country: Optional[str]     = None
+    job_area: Optional[str]    = None
+    source_type: Optional[str] = None
 
 # ── Setup upload directory ──
 BASE_DIR = os.path.dirname(__file__)
@@ -325,33 +339,34 @@ def sanitize(obj):
 
 # ── Answer endpoint ──
 @app.post("/answer")
-def answer_question(req: QueryRequest):
+def answer_chat(req: ChatRequest):
     try:
-        # 1) fetch top-k chunks, now with metadata filters
+        # 1)  get the last user turn for retrieval
+        user_query = req.messages[-1].content
         hits = retrieve(
-            query      = req.question,
-            k          = req.top_k,
-            country    = req.country,
-            job_area   = req.job_area,
-            source_type= req.source_type
+            query       = user_query,
+            k           = req.top_k,
+            country     = req.country,
+            job_area    = req.job_area,
+            source_type = req.source_type
         )
 
         # 2) build context
         context = "\n\n".join(chunk for _, chunk, _ in hits)
 
         # 3) query GPT
-        prompt = (
-            "You are a helpful assistant. Use ONLY the context below to answer.\n\n"
-            f"Context:\n{context}\n\n"
-            f"Question: {req.question}\nAnswer:"
-        )
+        chat_msgs = [
+            {"role": "system", "content": "You are a helpful assistant. Use ONLY the context below to answer."},
+            *[
+                {"role": m.role, "content": m.content}
+                for m in req.messages
+                ],
+                {"role": "system", "content": f"Context:\n{context}"}
+                ]
         resp = openai.ChatCompletion.create(
             model="gpt-4-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user",   "content": prompt},
-            ],
-        )
+            messages=chat_msgs
+            )
         answer = resp.choices[0].message.content.strip()
 
         # 4) build sources
@@ -360,10 +375,8 @@ def answer_question(req: QueryRequest):
             for fn, _, dist in hits
         ]
 
-        # 5) sanitize and return
-        response_data = {"answer": answer, "sources": sources}
-        safe = sanitize(response_data)
-        return JSONResponse(content=safe)
+        return {"answer": answer, "sources": sources}
+        
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

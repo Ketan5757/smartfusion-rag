@@ -322,7 +322,16 @@ const playTTS = async (text) => {
     setError('');
     setQueryLoading(true);
     try {
-      const body = { question: q, top_k: 5 };
+      const body = {
+        top_k: 5,
+        country: countryFilter || undefined,
+        job_area: jobAreaFilter || undefined,
+        source_type: sourceTypeFilter || undefined,
+        messages: [
+          ...chatHistory.map(m => ({ role: m.role, content: m.content })),
+          { role: "user", content: q }
+        ]
+      };
       if (filtersApplied) {
         if (countryFilter)    body.country     = countryFilter;
         if (jobAreaFilter)    body.job_area    = jobAreaFilter;
