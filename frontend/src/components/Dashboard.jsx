@@ -74,7 +74,7 @@ const Dashboard = () => {
       audioStreamRef.current.getTracks().forEach(t => t.stop());
 
       const blob = new Blob(chunks, { type: "audio/webm" });
-      console.log("🕵️ Recorded blob size:", blob.size);
+      console.log(" Recorded blob size:", blob.size);
 
       const form = new FormData();
       form.append("file", blob, "speech.webm");
@@ -126,7 +126,7 @@ useEffect(() => {
 // TTS Feature
 const playTTS = async (text) => {
     try {
-      // 1️⃣ If there’s already an Audio playing, stop it and clear the ref
+      // 1️ If there’s already an Audio playing, stop it and clear the ref
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -134,7 +134,7 @@ const playTTS = async (text) => {
         return;
       }
 
-      // 2️⃣ Otherwise, fetch a new MP3 from your backend
+      // 2️ Otherwise, fetch a new MP3 from your backend
       const res = await fetch('http://localhost:8000/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -146,16 +146,16 @@ const playTTS = async (text) => {
         throw new Error(payload.detail || payload.error || `Status ${res.status}`);
       }
 
-      // 3️⃣ Wrap in a Blob so the browser knows it’s MPEG
+      // 3️ Wrap in a Blob so the browser knows it’s MPEG
       const buffer = await res.arrayBuffer();
       const blob   = new Blob([buffer], { type: 'audio/mpeg' });
       const url    = URL.createObjectURL(blob);
 
-      // 4️⃣ Create a new Audio, store it in the ref, and play
+      // 4️ Create a new Audio, store it in the ref, and play
       const audio = new Audio(url);
       audioRef.current = audio;
 
-      // 5️⃣ When playback ends, clear the ref so the next click will re-fetch
+      // 5️ When playback ends, clear the ref so the next click will re-fetch
       audio.onended = () => {
         audioRef.current = null;
       };
