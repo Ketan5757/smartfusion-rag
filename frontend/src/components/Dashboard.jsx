@@ -7,6 +7,7 @@ import sendIcon   from '../assets/send.png';
 import micIcon    from '../assets/mic.png';
 import { useState, useEffect, useRef } from 'react';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import ReactMarkdown from 'react-markdown'
 
 
 const Dashboard = () => {
@@ -561,7 +562,11 @@ const playTTS = async (text) => {
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
           <span className="chat-user-icon">👤 ⇒</span>
-          <span className="chat-user-text">{msg.content}</span>
+          <div className="chat-user-text" style={{ flexGrow: 1 }}>
+            <ReactMarkdown>
+              {msg.content}
+            </ReactMarkdown>
+          </div>
         </div>
       ) : (
         <div
@@ -569,10 +574,11 @@ const playTTS = async (text) => {
           className="chat-assistant"
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          <span className="chat-assistant-icon">🤖 ⇒</span>
-          <span className="chat-assistant-text" style={{ flexGrow: 1 }}>
-            {msg.content}
-          </span>
+          <div className="chat-assistant-text" style={{ flexGrow: 1 }}>
+            <ReactMarkdown>
+              {msg.content}
+            </ReactMarkdown>
+          </div>
           <PlayArrowIcon
             sx={{ cursor: 'pointer', fontSize: 24, marginLeft: '0.5rem' }}
             onClick={() => playTTS(msg.content)}
