@@ -41,6 +41,7 @@ class ChatRequest(BaseModel):
     country: Optional[str]     = None
     job_area: Optional[str]    = None
     source_type: Optional[str] = None
+    filenames: Optional[List[str]] = None
 
 # ── Setup upload directory ──
 BASE_DIR = os.path.dirname(__file__)
@@ -258,7 +259,8 @@ def retrieve(
     k: int,
     country: Optional[str] = None,
     job_area: Optional[str] = None,
-    source_type: Optional[str] = None
+    source_type: Optional[str] = None,
+    filenames: Optional[List[str]] = None
 ):
     q_emb = get_embedding(query)
 
@@ -270,6 +272,10 @@ def retrieve(
         filters.append("job_area ILIKE %s");     params.append(f"%{job_area}%")
     if source_type:
         filters.append("source_type ILIKE %s");  params.append(f"%{source_type}%")
+        if filenames:
+            filters.append("filename = ANY(%s)")
+            params.append(filenames)
+
 
     where_sql = ""
     if filters:
@@ -343,12 +349,14 @@ def answer_chat(req: ChatRequest):
     try:
         # 1)  get the last user turn for retrieval
         user_query = req.messages[-1].content
+        print("🔍 Retrieving from files:", req.filenames)
         hits = retrieve(
             query       = user_query,
             k           = req.top_k,
             country     = req.country,
             job_area    = req.job_area,
-            source_type = req.source_type
+            source_type = req.source_type,
+            filenames   = req.filenames
         )
 
         # 2) build context
@@ -389,6 +397,7 @@ def search(
     country: Optional[str] = Query(None),
     job_area: Optional[str] = Query(None),
     source_type: Optional[str] = Query(None),
+    filenames: List[str] = Query(None),
     k: int = Query(5, ge=1, le=50)
 ):
     
@@ -397,6 +406,7 @@ def search(
         if country:     filters.append("country ILIKE %s");    params.append(f"%{country}%")
         if job_area:    filters.append("job_area ILIKE %s");   params.append(f"%{job_area}%")
         if source_type: filters.append("source_type ILIKE %s");params.append(f"%{source_type}%")
+        if filenames: filters.append("filename = ANY(%s)"); params.append(filenames)
         where = "WHERE " + " AND ".join(filters) if filters else ""
         sql = f"""
         SELECT filename
@@ -486,6 +496,7 @@ def list_documents(
     country: Optional[str] = Query(None, description="Filter by country"),
     job_area: Optional[str] = Query(None, description="Filter by job_area"),
     source_type: Optional[str] = Query(None, description="Filter by source_type"),
+    filenames: List[str]       = Query(None),
 ):
     conn = get_db_connection()
     cur  = conn.cursor()
@@ -502,6 +513,8 @@ def list_documents(
     if source_type:
         filters.append("source_type ILIKE %s")
         params.append(f"%{source_type}%")
+        if filenames:
+            files = [f for f in files if f in filenames]
 
     where_sql = ("WHERE " + " AND ".join(filters)) if filters else ""
 
@@ -514,6 +527,8 @@ def list_documents(
     """
     cur.execute(sql, params)
     files = [row[0] for row in cur.fetchall()]
+    if filenames:
+        files = [f for f in files if f in filenames]
     cur.close()
     conn.close()
     return files

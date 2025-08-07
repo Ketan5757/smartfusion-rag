@@ -28,6 +28,7 @@ const Dashboard = () => {
   // Stored docs
   const [storedDocs, setStoredDocs]         = useState([]);
   const chatContainerRef = useRef(null);
+  const [selectedDocs, setSelectedDocs] = useState([]);
 
   // Metadata options
   const countryOptions    = ['Germany','India','France','Spain'];
@@ -55,6 +56,14 @@ const Dashboard = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [error, setError]                        = useState('');
   const [queryLoading, setQueryLoading]          = useState(false);
+
+  const toggleSelect = fn => {
+  setSelectedDocs(current =>
+    current.includes(fn)
+      ? current.filter(x => x !== fn)
+      : [...current, fn]
+  );
+};
 
    const handleMicClick = async () => {
   // ▶︎ Start recording
@@ -328,6 +337,7 @@ const playTTS = async (text) => {
         country: countryFilter || undefined,
         job_area: jobAreaFilter || undefined,
         source_type: sourceTypeFilter || undefined,
+        filenames: selectedDocs.length ? selectedDocs : undefined,
         messages: [
           ...chatHistory.map(m => ({ role: m.role, content: m.content })),
           { role: "user", content: q }
@@ -338,6 +348,8 @@ const playTTS = async (text) => {
         if (jobAreaFilter)    body.job_area    = jobAreaFilter;
         if (sourceTypeFilter) body.source_type = sourceTypeFilter;
       }
+
+      console.log("POST /answer body:", body);
 
       const res = await fetch('http://localhost:8000/answer', {
         method: 'POST',
@@ -378,11 +390,15 @@ const playTTS = async (text) => {
             {storedDocs.length === 0
               ? <li className="placeholder">No stored docs yet.</li>
               : storedDocs.map(fn => (
-                  <li key={fn}>
-                    <button className="delete-button" onClick={() => handleDelete(fn)}>×</button>
-                    {stripExt(fn)}
-                  </li>
-                ))
+              <li key={fn} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                type="checkbox"
+                checked={selectedDocs.includes(fn)}
+                onChange={() => toggleSelect(fn)}
+                />
+                <button className="delete-button" onClick={() => handleDelete(fn)}>×</button>
+                <span>{stripExt(fn)}</span>
+                </li>))
             }
           </ol>
         </div>

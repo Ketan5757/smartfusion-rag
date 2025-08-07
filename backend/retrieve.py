@@ -25,7 +25,7 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 
 # ── Retrieval Function with Metadata Filters ──
-def retrieve(query, k=5, country=None, job_area=None, source_type=None):
+def retrieve(query, k=5, country=None, job_area=None, source_type=None, filenames: list[str] = None):
     """
     Perform semantic search with optional metadata filters.
     Returns list of (filename, snippet).
@@ -45,6 +45,10 @@ def retrieve(query, k=5, country=None, job_area=None, source_type=None):
     if source_type:
         filters.append("source_type = %s")
         params.append(source_type)
+        if filenames:
+            filters.append("filename = ANY(%s)")
+            params.append(filenames)
+
 
     where_sql = ""
     if filters:
