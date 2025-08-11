@@ -194,6 +194,7 @@ const playTTS = async (text) => {
     );
     const docs = await fetch('http://localhost:8000/documents').then(r => r.json());
     setStoredDocs(docs.reverse());
+    setSelectedDocs(sel => sel.filter(x => x !== fn)); // ⬅ uncheck if deleted
   };
 
   // upload (handles both file and URL)
@@ -280,7 +281,10 @@ const playTTS = async (text) => {
     try {
       //  no filters at all ⇒ list every file
       if (!countryFilter && !jobAreaFilter && !sourceTypeFilter) {
-        const docs = await fetch('http://localhost:8000/documents')
+        const p = new URLSearchParams();
+        if (selectedDocs.length) selectedDocs.forEach(f => p.append('filenames', f));
+        const url = p.toString() ? `http://localhost:8000/documents?${p}` : 'http://localhost:8000/documents';
+        const docs = await fetch(url)
                            .then(r => r.json())
         setResults(docs.map(fn => ({ filename: fn, snippet: '' })))
       }
@@ -290,6 +294,7 @@ const playTTS = async (text) => {
         if (countryFilter)    params.append('country',    countryFilter)
         if (jobAreaFilter)    params.append('job_area',    jobAreaFilter)
         if (sourceTypeFilter) params.append('source_type', sourceTypeFilter)
+        if (selectedDocs.length) selectedDocs.forEach(f => params.append('filenames', f));
 
         // hits back to /documents with metadata filters
         const docs = await fetch(
@@ -304,6 +309,7 @@ const playTTS = async (text) => {
         if (countryFilter)    params.append('country',    countryFilter)
         if (jobAreaFilter)    params.append('job_area',    jobAreaFilter)
         if (sourceTypeFilter) params.append('source_type', sourceTypeFilter)
+        if (selectedDocs.length) selectedDocs.forEach(f => params.append('filenames', f));
 
         const res = await fetch(
           `http://localhost:8000/search/?${params.toString()}`

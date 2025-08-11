@@ -272,9 +272,9 @@ def retrieve(
         filters.append("job_area ILIKE %s");     params.append(f"%{job_area}%")
     if source_type:
         filters.append("source_type ILIKE %s");  params.append(f"%{source_type}%")
-        if filenames:
-            filters.append("filename = ANY(%s)")
-            params.append(filenames)
+    if filenames:
+        filters.append("filename = ANY(%s)")
+        params.append(filenames)
 
 
     where_sql = ""
@@ -438,6 +438,9 @@ def search(
     if source_type:
         filters.append("source_type ILIKE %s")
         params.append(f"%{source_type}%")
+    if filenames:
+        filters.append("filename = ANY(%s)");   
+        params.append(filenames)
 
     where_sql = ""
     if filters:
@@ -513,8 +516,10 @@ def list_documents(
     if source_type:
         filters.append("source_type ILIKE %s")
         params.append(f"%{source_type}%")
-        if filenames:
-            files = [f for f in files if f in filenames]
+    if filenames:
+        filters.append("filename = ANY(%s)")
+        params.append(filenames)
+
 
     where_sql = ("WHERE " + " AND ".join(filters)) if filters else ""
 
@@ -527,8 +532,6 @@ def list_documents(
     """
     cur.execute(sql, params)
     files = [row[0] for row in cur.fetchall()]
-    if filenames:
-        files = [f for f in files if f in filenames]
     cur.close()
     conn.close()
     return files

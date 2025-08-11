@@ -37,17 +37,13 @@ def retrieve(query, k=5, country=None, job_area=None, source_type=None, filename
     filters = []
     params = []
     if country:
-        filters.append("country = %s")
-        params.append(country)
+        filters.append("country ILIKE %s");     params.append(f"%{country}%")
     if job_area:
-        filters.append("job_area = %s")
-        params.append(job_area)
+        filters.append("job_area ILIKE %s");    params.append(f"%{job_area}%")
     if source_type:
-        filters.append("source_type = %s")
-        params.append(source_type)
-        if filenames:
-            filters.append("filename = ANY(%s)")
-            params.append(filenames)
+        filters.append("source_type ILIKE %s"); params.append(f"%{source_type}%")
+    if filenames:
+        filters.append("filename = ANY(%s)");   params.append(filenames)
 
 
     where_sql = ""
