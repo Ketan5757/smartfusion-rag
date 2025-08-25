@@ -221,10 +221,10 @@ async def ingest_url(
 
     # 2) parse HTML → raw text
     soup      = BeautifulSoup(resp.text, "html.parser")
-    full_text = " ".join(soup.stripped_strings)    # ← define full_text here!
+    full_text = " ".join(soup.stripped_strings)   
 
     # 3) split into chunks
-    chunks = chunk_text(full_text)                 # ← now chunks exists
+    chunks = chunk_text(full_text)                 
 
     # 4) embed & store
     conn = get_db_connection()
